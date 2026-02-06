@@ -1,0 +1,58 @@
+name: podman
+version: v0.0.1
+home: https://github.com/kuju63/devpod-provider-podman
+description: |-
+  DevPod on Podman
+
+optionGroups:
+  - options:
+      - PODMAN_PATH
+      - INACTIVITY_TIMEOUT
+    name: "Advanced Options"
+
+options:
+  INACTIVITY_TIMEOUT:
+    description: "If defined, will automatically stop the container after the inactivity period. Examples: 10m, 1h"
+
+  PODMAN_PATH:
+    description: The path where to find the podman binary.
+    default: podman
+
+agent:
+  containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
+  local: true
+  docker:
+    path: ${PODMAN_PATH}
+    install: false
+
+exec:
+  init: |-
+    #!/bin/bash
+    set -e
+
+    # Check if podman command exists
+    if ! command -v ${PODMAN_PATH} &> /dev/null; then
+      >&2 echo "Error: Podman binary not found at '${PODMAN_PATH}'"
+      >&2 echo "Please install Podman: brew install podman"
+      >&2 echo "Or set PODMAN_PATH option to the correct location."
+      exit 1
+    fi
+
+    # Check Podman version
+    PODMAN_VERSION=$(${PODMAN_PATH} --version | awk '{print $3}')
+    echo "Found Podman version: ${PODMAN_VERSION}"
+
+    # Test podman connectivity (requires Podman Machine to be running on macOS)
+    ${PODMAN_PATH} ps >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      >&2 echo "Error: Podman is not reachable."
+      >&2 echo "On macOS, please ensure Podman Machine is running:"
+      >&2 echo "  podman machine start"
+      >&2 echo "You can verify connectivity via: ${PODMAN_PATH} ps"
+      exit 1
+    fi
+
+    echo "Podman provider initialized successfully."
+
+  command: |-
+    "${DEVPOD}" helper sh -c "${COMMAND}"
