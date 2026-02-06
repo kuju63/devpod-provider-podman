@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 DevPod向けのPodmanプロバイダー実装。DevPodはオープンソースのクライアントサイド開発環境管理ツールで、このプロバイダーはPodmanコンテナエンジンを利用してワークスペースを管理する。
 
+## 開発ステータス
+
+- ✅ **Phase 1完成** (v0.0.1): 基本的なプロバイダー機能
+- ✅ **Phase 2完成** (v0.1.0): macOS Podman Machine自動管理とリソース設定
+
 ## 開発フロー
 
 新しいプラットフォームやフィーチャーを追加する際は、必ずGitHub issueを作成してissue駆動開発を行う。
@@ -34,8 +39,32 @@ DevPodプロバイダーは`provider.yaml`ファイルで定義される。主�
 
 ### Podman固有の考慮事項
 
-Podmanはnon-machineプロバイダーとして実装される（VMではなくコンテナを直接操作）。
-agent.driverは`docker`互換モードまたはPodman専用の実装を使用する可能性がある。
+- **プラットフォーム差異**: macOSではPodman MachineのVM管理が必要、LinuxではコンテナDaemonへの直接接続
+- **driver設定**: agent.driverは`docker`互換モードを使用（docker CLI互換）
+- **Machine管理**: macOS環境では`exec.init`スクリプトで自動Machine管理を実装
+
+### Phase 2で追加された機能
+
+1. **オプション管理**:
+   - `optionGroups`で3つのカテゴリに分類（Basic、Machine Management、Machine Resources）
+   - 合計10個のオプション（Phase 1の2個 + Phase 2の8個）
+
+2. **initスクリプトの拡張**:
+   - プラットフォーム検出（`$OSTYPE`）
+   - Machine名の自動検出または指定
+   - Machine存在確認と自動作成
+   - Machine状態確認と自動起動
+   - タイムアウト付き起動待機ループ
+   - 詳細なエラーメッセージとガイダンス
+
+3. **リソース設定**:
+   - CPU、メモリ、ディスクサイズの設定
+   - rootful/rootlessモードの選択
+   - 設定はMachine作成時のみ適用
+
+4. **エラーハンドリング**:
+   - 各エラー状態で手動解決方法と自動化オプションを提示
+   - タイムアウト設定の調整ガイダンス
 
 ## 参考リソース
 

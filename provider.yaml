@@ -1,14 +1,26 @@
 name: podman
-version: v0.0.1
+version: v0.1.0
 home: https://github.com/kuju63/devpod-provider-podman
 description: |-
   DevPod on Podman
 
 optionGroups:
-  - options:
+  - name: "Basic Options"
+    options:
       - PODMAN_PATH
       - INACTIVITY_TIMEOUT
-    name: "Advanced Options"
+  - name: "Machine Management"
+    options:
+      - PODMAN_MACHINE_AUTO_START
+      - PODMAN_MACHINE_AUTO_INIT
+      - PODMAN_MACHINE_NAME
+      - PODMAN_MACHINE_START_TIMEOUT
+  - name: "Machine Resources"
+    options:
+      - PODMAN_MACHINE_CPUS
+      - PODMAN_MACHINE_MEMORY
+      - PODMAN_MACHINE_DISK_SIZE
+      - PODMAN_MACHINE_ROOTFUL
 
 options:
   INACTIVITY_TIMEOUT:
@@ -17,6 +29,37 @@ options:
   PODMAN_PATH:
     description: The path where to find the podman binary.
     default: podman
+
+  PODMAN_MACHINE_AUTO_START:
+    description: "Automatically start Podman Machine if it is stopped (macOS only)."
+    default: "true"
+
+  PODMAN_MACHINE_AUTO_INIT:
+    description: "Automatically initialize Podman Machine if it does not exist (macOS only)."
+    default: "false"
+
+  PODMAN_MACHINE_NAME:
+    description: "Name of the Podman Machine to use. If empty, auto-detects the first available machine."
+
+  PODMAN_MACHINE_START_TIMEOUT:
+    description: "Timeout in seconds to wait for Podman Machine to start."
+    default: "60"
+
+  PODMAN_MACHINE_CPUS:
+    description: "Number of CPUs to allocate to Podman Machine. Only used during machine creation."
+    default: "2"
+
+  PODMAN_MACHINE_MEMORY:
+    description: "Memory in MB to allocate to Podman Machine. Only used during machine creation."
+    default: "2048"
+
+  PODMAN_MACHINE_DISK_SIZE:
+    description: "Disk size in GB to allocate to Podman Machine. Only used during machine creation."
+    default: "100"
+
+  PODMAN_MACHINE_ROOTFUL:
+    description: "Run Podman Machine in rootful mode. Allows privileged operations but less secure."
+    default: "false"
 
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
@@ -42,13 +85,105 @@ exec:
     PODMAN_VERSION=$(${PODMAN_PATH} --version | awk '{print $3}')
     echo "Found Podman version: ${PODMAN_VERSION}"
 
-    # Test podman connectivity (requires Podman Machine to be running on macOS)
+    # Podman Machine management (macOS only)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      echo "Checking Podman Machine status..."
+
+      # Resolve machine name
+      MACHINE_NAME="${PODMAN_MACHINE_NAME:-}"
+      if [ -z "$MACHINE_NAME" ]; then
+        MACHINE_NAME=$(${PODMAN_PATH} machine list --format '{{.Name}}' --noheading 2>/dev/null | head -n1 || echo "")
+        if [ -n "$MACHINE_NAME" ]; then
+          echo "Auto-detected machine: $MACHINE_NAME"
+        fi
+      fi
+
+      # Check if machine exists
+      if [ -z "$MACHINE_NAME" ]; then
+        if [ "${PODMAN_MACHINE_AUTO_INIT:-false}" = "true" ]; then
+          echo "Creating new Podman Machine..."
+          MACHINE_NAME="devpod-machine"
+
+          INIT_CMD="${PODMAN_PATH} machine init \"$MACHINE_NAME\""
+          INIT_CMD="$INIT_CMD --cpus ${PODMAN_MACHINE_CPUS:-2}"
+          INIT_CMD="$INIT_CMD --memory ${PODMAN_MACHINE_MEMORY:-2048}"
+          INIT_CMD="$INIT_CMD --disk-size ${PODMAN_MACHINE_DISK_SIZE:-100}"
+
+          if [ "${PODMAN_MACHINE_ROOTFUL:-false}" = "true" ]; then
+            INIT_CMD="$INIT_CMD --rootful"
+          fi
+
+          eval $INIT_CMD
+          echo "Machine created successfully: $MACHINE_NAME"
+        else
+          >&2 echo "Error: No Podman Machine found."
+          >&2 echo ""
+          >&2 echo "Manual fix:"
+          >&2 echo "  podman machine init"
+          >&2 echo "  podman machine start"
+          >&2 echo ""
+          >&2 echo "Or enable auto-init:"
+          >&2 echo "  devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true"
+          exit 1
+        fi
+      fi
+
+      # Check machine state
+      MACHINE_STATE=$(${PODMAN_PATH} machine inspect "$MACHINE_NAME" --format '{{.State}}' 2>/dev/null || echo "unknown")
+      echo "Machine '$MACHINE_NAME' state: $MACHINE_STATE"
+
+      if [ "$MACHINE_STATE" != "running" ]; then
+        if [ "${PODMAN_MACHINE_AUTO_START:-true}" = "true" ]; then
+          echo "Starting Podman Machine '$MACHINE_NAME'..."
+          ${PODMAN_PATH} machine start "$MACHINE_NAME"
+
+          # Wait for machine to be ready
+          TIMEOUT=${PODMAN_MACHINE_START_TIMEOUT:-60}
+          ELAPSED=0
+          echo "Waiting for machine to be ready (timeout: ${TIMEOUT}s)..."
+
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            if ${PODMAN_PATH} ps >/dev/null 2>&1; then
+              echo "Podman Machine ready after ${ELAPSED}s"
+              break
+            fi
+            sleep 2
+            ELAPSED=$((ELAPSED + 2))
+          done
+
+          if [ $ELAPSED -ge $TIMEOUT ]; then
+            >&2 echo "Error: Machine start timed out after ${TIMEOUT}s"
+            >&2 echo ""
+            >&2 echo "You can increase the timeout:"
+            >&2 echo "  devpod provider set-options podman PODMAN_MACHINE_START_TIMEOUT=120"
+            exit 1
+          fi
+        else
+          >&2 echo "Error: Podman Machine '$MACHINE_NAME' is not running."
+          >&2 echo ""
+          >&2 echo "Manual fix:"
+          >&2 echo "  podman machine start $MACHINE_NAME"
+          >&2 echo ""
+          >&2 echo "Or enable auto-start:"
+          >&2 echo "  devpod provider set-options podman PODMAN_MACHINE_AUTO_START=true"
+          exit 1
+        fi
+      else
+        echo "Machine is already running."
+      fi
+    fi
+
+    # Test podman connectivity
+    echo "Testing Podman connectivity..."
     ${PODMAN_PATH} ps >/dev/null 2>&1
     if [ $? -ne 0 ]; then
       >&2 echo "Error: Podman is not reachable."
-      >&2 echo "On macOS, please ensure Podman Machine is running:"
-      >&2 echo "  podman machine start"
-      >&2 echo "You can verify connectivity via: ${PODMAN_PATH} ps"
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        >&2 echo "This should not happen after machine management."
+        >&2 echo "Please check: podman machine list"
+      else
+        >&2 echo "Please ensure Podman is running properly."
+      fi
       exit 1
     fi
 
