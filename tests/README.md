@@ -47,6 +47,29 @@ chmod +x integration_test.sh
 - 4つのテストすべてが成功（✓）
 - クリーンアップ完了
 
+### 3. `test_mismatch_detection.sh`
+リソース設定の不一致検出ロジックをテストします（Phase 3追加）。
+
+**テスト内容:**
+- CPU設定の不一致検出
+- メモリ設定の不一致検出
+- ディスクサイズの不一致検出
+- rootfulモード設定の不一致検出
+- 複数の不一致同時検出
+- 設定が一致する場合の判定
+- rootful値の正規化（true/false/1の正規化）
+
+**実行方法:**
+```bash
+cd tests
+chmod +x test_mismatch_detection.sh
+./test_mismatch_detection.sh
+```
+
+**期待される結果:**
+- すべてのテストが成功（✓ 7/7）
+- 各テストで正しく不一致/一致を検出
+
 ## 前提条件
 
 テストを実行する前に、以下がインストールされている必要があります：
@@ -157,7 +180,7 @@ podman machine stop
 devpod up <test-repo> --provider podman
 ```
 
-### TS7: rootfulモード
+### TS6: rootfulモード
 ```bash
 # rootfulモードでMachine作成
 devpod provider set-options podman \
@@ -170,6 +193,45 @@ devpod up <test-repo> --provider podman
 
 # rootful設定確認
 podman machine inspect | grep -i rootful
+```
+
+### TS7: リソース設定変更警告（Phase 3追加）
+```bash
+# 前提：既存のMachineがCPU=2, Memory=2048で稼働中
+
+# リソース設定を変更（AUTO_INIT=falseのため警告を表示）
+devpod provider set-options podman \
+  -o PODMAN_MACHINE_CPUS=8 \
+  -o PODMAN_MACHINE_MEMORY=4096
+
+# ワークスペース起動時に警告が表示される
+devpod up <test-repo> --provider podman
+
+# 期待される警告メッセージ：
+# ⚠️  WARNING: Machine resource configuration mismatch detected
+# Configuration differences:
+#   • CPUs: Current=2, Desired=8
+#   • Memory: Current=2048MB, Desired=4096MB
+```
+
+### TS8: 新規Machine作成時の警告非表示（Phase 3追加）
+```bash
+# Machineを削除
+podman machine stop
+podman machine rm
+
+# AUTO_INIT有効化
+devpod provider set-options podman \
+  -o PODMAN_MACHINE_AUTO_INIT=true \
+  -o PODMAN_MACHINE_CPUS=8 \
+  -o PODMAN_MACHINE_MEMORY=4096
+
+# ワークスペース起動時に新規Machine作成
+devpod up <test-repo> --provider podman
+
+# 期待される動作：
+# - 新規Machine作成（警告なし）
+# - 作成時に指定リソース（CPU=8, Memory=4096）が適用される
 ```
 
 ## レポート

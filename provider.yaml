@@ -170,6 +170,81 @@ exec:
         fi
       else
         echo "Machine is already running."
+
+        # Check for resource configuration mismatch
+        if [ "${PODMAN_MACHINE_AUTO_INIT}" != "true" ]; then
+          MACHINE_INFO=$(${PODMAN_PATH} machine inspect "$MACHINE_NAME" 2>/dev/null)
+          if [ $? -eq 0 ] && [ -n "$MACHINE_INFO" ]; then
+            # Parse current machine configuration
+            CURRENT_CPUS=$(echo "$MACHINE_INFO" | grep -o '"CPUs": *[0-9]*' | awk '{print $2}')
+            CURRENT_MEMORY=$(echo "$MACHINE_INFO" | grep -o '"Memory": *[0-9]*' | awk '{print $2}')
+            CURRENT_DISK=$(echo "$MACHINE_INFO" | grep -o '"DiskSize": *[0-9]*' | awk '{print $2}')
+            CURRENT_ROOTFUL=$(echo "$MACHINE_INFO" | grep -o '"Rootful": *[a-z]*' | awk '{print $2}')
+
+            # Get desired configuration (with defaults)
+            DESIRED_CPUS="${PODMAN_MACHINE_CPUS:-2}"
+            DESIRED_MEMORY="${PODMAN_MACHINE_MEMORY:-2048}"
+            DESIRED_DISK="${PODMAN_MACHINE_DISK_SIZE:-100}"
+            DESIRED_ROOTFUL="${PODMAN_MACHINE_ROOTFUL:-false}"
+
+            # Normalize rootful values for comparison
+            NORM_CURRENT_ROOTFUL="false"
+            if [ "$CURRENT_ROOTFUL" = "true" ] || [ "$CURRENT_ROOTFUL" = "1" ]; then
+              NORM_CURRENT_ROOTFUL="true"
+            fi
+
+            # Detect mismatches
+            MISMATCHES=""
+            if [ "$CURRENT_CPUS" != "$DESIRED_CPUS" ]; then
+              MISMATCHES="${MISMATCHES}  • CPUs: Current=${CURRENT_CPUS}, Desired=${DESIRED_CPUS}\n"
+            fi
+            if [ "$CURRENT_MEMORY" != "$DESIRED_MEMORY" ]; then
+              MISMATCHES="${MISMATCHES}  • Memory: Current=${CURRENT_MEMORY}MB, Desired=${DESIRED_MEMORY}MB\n"
+            fi
+            if [ "$CURRENT_DISK" != "$DESIRED_DISK" ]; then
+              MISMATCHES="${MISMATCHES}  • Disk Size: Current=${CURRENT_DISK}GB, Desired=${DESIRED_DISK}GB\n"
+            fi
+            if [ "$NORM_CURRENT_ROOTFUL" != "$DESIRED_ROOTFUL" ]; then
+              MISMATCHES="${MISMATCHES}  • Rootful Mode: Current=${NORM_CURRENT_ROOTFUL}, Desired=${DESIRED_ROOTFUL}\n"
+            fi
+
+            # Display warning if mismatches found
+            if [ -n "$MISMATCHES" ]; then
+              >&2 echo ""
+              >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              >&2 echo "⚠️  WARNING: Machine resource configuration mismatch detected"
+              >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              >&2 echo ""
+              >&2 echo "The Podman Machine '$MACHINE_NAME' exists with different resource"
+              >&2 echo "settings than requested. Resource settings only apply during machine"
+              >&2 echo "creation and cannot be changed on existing machines."
+              >&2 echo ""
+              >&2 echo "Configuration differences:"
+              >&2 echo -e "$MISMATCHES"
+              >&2 echo "To apply the new settings, you need to recreate the machine:"
+              >&2 echo ""
+              >&2 echo "  1. Stop the current machine:"
+              >&2 echo "     podman machine stop $MACHINE_NAME"
+              >&2 echo ""
+              >&2 echo "  2. Delete the machine (⚠️  This will remove all data):"
+              >&2 echo "     podman machine rm $MACHINE_NAME"
+              >&2 echo ""
+              >&2 echo "  3. Recreate with DevPod (auto-init must be enabled):"
+              >&2 echo "     devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true"
+              >&2 echo "     devpod up <your-workspace> --provider podman"
+              >&2 echo ""
+              >&2 echo "Or manually create with specific resources:"
+              >&2 echo "  podman machine init $MACHINE_NAME \\"
+              >&2 echo "    --cpus $DESIRED_CPUS \\"
+              >&2 echo "    --memory $DESIRED_MEMORY \\"
+              >&2 echo "    --disk-size $DESIRED_DISK"
+              >&2 echo ""
+              >&2 echo "Continuing with existing machine configuration..."
+              >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              >&2 echo ""
+            fi
+          fi
+        fi
       fi
     fi
 
