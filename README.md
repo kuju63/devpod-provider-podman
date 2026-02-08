@@ -6,15 +6,16 @@ DevPod向けのPodmanプロバイダー実装 / Podman Provider for DevPod
 
 このプロジェクトは、[DevPod](https://devpod.sh/)向けのPodmanコンテナエンジン用プロバイダーを提供します。DevPodはクライアントサイドで動作するオープンソースの開発環境管理ツールで、このプロバイダーを使用することでPodmanコンテナを使った開発ワークスペースを管理できます。
 
-## ステータス
+## 機能
 
-✅ **Phase 2完成** - 自動Machine管理とリソース設定機能を含む完全版が動作します。
-
-**機能:**
-- Podmanコンテナでの開発環境作成
-- macOSでのPodman Machine自動管理
-- リソース設定（CPU、メモリ、ディスク）のカスタマイズ
-- 非アクティブタイムアウトによる自動停止
+- ✅ Podmanコンテナでの開発環境作成と管理
+- ✅ macOSでのPodman Machine自動管理
+- ✅ Machine自動起動・自動作成
+- ✅ リソース設定（CPU、メモリ、ディスク）のカスタマイズ
+- ✅ リソースの非破壊的in-place更新（`podman machine set`対応）
+- ✅ rootful/rootlessモードの選択
+- ✅ 非アクティブタイムアウトによる自動停止
+- ✅ 詳細なエラーメッセージとガイダンス
 
 ## 前提条件
 
@@ -86,7 +87,7 @@ devpod delete <workspace-name>
 | `PODMAN_MACHINE_NAME` | 使用するMachine名（空白で自動検出） | 自動検出 |
 | `PODMAN_MACHINE_START_TIMEOUT` | 起動タイムアウト（秒） | `60` |
 
-### Machineリソース設定（作成時のみ適用）
+### Machineリソース設定
 
 | オプション | 説明 | デフォルト値 |
 |-----------|------|-------------|
@@ -94,6 +95,7 @@ devpod delete <workspace-name>
 | `PODMAN_MACHINE_MEMORY` | メモリ（MB） | `4096` |
 | `PODMAN_MACHINE_DISK_SIZE` | ディスク（GB） | `100` |
 | `PODMAN_MACHINE_ROOTFUL` | rootfulモード（特権操作許可、低セキュリティ） | `false` |
+| `PODMAN_MACHINE_AUTO_RESOURCE_UPDATE` | リソース設定の不一致を検出時に自動更新（非破壊的） | `false` |
 
 ### オプションの設定例
 
@@ -170,13 +172,51 @@ devpod provider set-options podman \
 
 ### リソース変更方法
 
-リソース設定は**Machine作成時のみ適用**されます。既存Machineのリソースを変更するには、Machineを再作成する必要があります:
+既存のPodman Machineのリソース設定を変更する方法は2つあります：
+
+#### 方法1: 非破壊的in-place更新（推奨）
+
+既存のMachineをそのまま保持してリソースを更新できます。データ損失なし。
+
+**自動更新**:
+```bash
+# 自動更新を有効化
+devpod provider set-options podman PODMAN_MACHINE_AUTO_RESOURCE_UPDATE=true
+
+# リソース設定を変更
+devpod provider set-options podman \
+  PODMAN_MACHINE_CPUS=4 \
+  PODMAN_MACHINE_MEMORY=8192
+
+# 次回のdevpod up時に自動的にリソースが更新されます
+devpod up <your-repo> --provider podman
+```
+
+**手動更新**:
+```bash
+# Machineを停止
+podman machine stop
+
+# リソースを更新（必要な項目のみ）
+podman machine set <machine-name> --cpus 4
+podman machine set <machine-name> --memory 8192
+podman machine set <machine-name> --disk-size 150  # 増加のみ可能
+
+# Machineを起動
+podman machine start
+```
+
+**注意**: ディスクサイズは増加のみ可能で、減少はできません。
+
+#### 方法2: Machine再作成（破壊的）
+
+完全に新しいMachineを作成します。すべてのデータが削除されます。
 
 ```bash
 # 1. オプションを設定
 devpod provider set-options podman PODMAN_MACHINE_MEMORY=8192
 
-# 2. 既存のMachineを削除
+# 2. 既存のMachineを削除（⚠️ データ損失）
 podman machine stop
 podman machine rm
 
@@ -269,20 +309,22 @@ devpod provider set-options podman PODMAN_MACHINE_NAME=my-machine
 devpod provider set-options podman PODMAN_MACHINE_NAME=""
 ```
 
-## 機能
+### リソース設定ミスマッチの警告
 
-### Phase 2 - 自動Machine管理とリソース設定
-- ✅ macOSでのPodman Machine自動起動
-- ✅ Machine自動作成（オプション）
-- ✅ リソース設定（CPU、メモリ、ディスク）
-- ✅ rootful/rootlessモードの選択
-- ✅ 詳細なエラーメッセージとガイダンス
+**原因**: 既存のMachineが要求されたリソース設定と異なる
 
-### Phase 1 - 基本機能
-- ✅ Podmanコンテナでの開発環境作成と管理
-- ✅ Docker互換モードでの動作
-- ✅ DevPodの標準機能サポート
-- ✅ 非アクティブタイムアウトによる自動停止
+**現象**: 起動時に警告メッセージが表示される
+
+**解決方法1 - 自動更新の有効化（推奨）**:
+```bash
+devpod provider set-options podman PODMAN_MACHINE_AUTO_RESOURCE_UPDATE=true
+```
+
+**解決方法2 - 手動で更新**:
+警告メッセージに表示される`podman machine set`コマンドを実行してください。
+
+**解決方法3 - 現在の設定を維持**:
+警告を無視して既存のMachine設定のまま使用できます。
 
 ## ライセンス
 

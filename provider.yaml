@@ -1,5 +1,5 @@
 name: podman
-version: v0.1.0
+version: v0.2.0
 home: https://github.com/kuju63/devpod-provider-podman
 description: |-
   DevPod on Podman
@@ -21,6 +21,7 @@ optionGroups:
       - PODMAN_MACHINE_MEMORY
       - PODMAN_MACHINE_DISK_SIZE
       - PODMAN_MACHINE_ROOTFUL
+      - PODMAN_MACHINE_AUTO_RESOURCE_UPDATE
 
 options:
   INACTIVITY_TIMEOUT:
@@ -59,6 +60,10 @@ options:
 
   PODMAN_MACHINE_ROOTFUL:
     description: "Run Podman Machine in rootful mode. Allows privileged operations but less secure."
+    default: "false"
+
+  PODMAN_MACHINE_AUTO_RESOURCE_UPDATE:
+    description: "Automatically update Podman Machine resources in-place when configuration mismatch is detected. Uses 'podman machine set' without recreating the machine."
     default: "false"
 
 agent:
@@ -195,53 +200,245 @@ exec:
 
             # Detect mismatches
             MISMATCHES=""
+            MISMATCH_CPUS=false
+            MISMATCH_MEMORY=false
+            MISMATCH_DISK=false
+            MISMATCH_ROOTFUL=false
+
             if [ "$CURRENT_CPUS" != "$DESIRED_CPUS" ]; then
               MISMATCHES="${MISMATCHES}  • CPUs: Current=${CURRENT_CPUS}, Desired=${DESIRED_CPUS}\n"
+              MISMATCH_CPUS=true
             fi
             if [ "$CURRENT_MEMORY" != "$DESIRED_MEMORY" ]; then
               MISMATCHES="${MISMATCHES}  • Memory: Current=${CURRENT_MEMORY}MB, Desired=${DESIRED_MEMORY}MB\n"
+              MISMATCH_MEMORY=true
             fi
             if [ "$CURRENT_DISK" != "$DESIRED_DISK" ]; then
               MISMATCHES="${MISMATCHES}  • Disk Size: Current=${CURRENT_DISK}GB, Desired=${DESIRED_DISK}GB\n"
+              MISMATCH_DISK=true
             fi
             if [ "$NORM_CURRENT_ROOTFUL" != "$DESIRED_ROOTFUL" ]; then
               MISMATCHES="${MISMATCHES}  • Rootful Mode: Current=${NORM_CURRENT_ROOTFUL}, Desired=${DESIRED_ROOTFUL}\n"
+              MISMATCH_ROOTFUL=true
             fi
 
-            # Display warning if mismatches found
+            # Handle mismatches if found
             if [ -n "$MISMATCHES" ]; then
-              >&2 echo ""
-              >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              >&2 echo "⚠️  WARNING: Machine resource configuration mismatch detected"
-              >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              >&2 echo ""
-              >&2 echo "The Podman Machine '$MACHINE_NAME' exists with different resource"
-              >&2 echo "settings than requested. Resource settings only apply during machine"
-              >&2 echo "creation and cannot be changed on existing machines."
-              >&2 echo ""
-              >&2 echo "Configuration differences:"
-              >&2 echo -e "$MISMATCHES"
-              >&2 echo "To apply the new settings, you need to recreate the machine:"
-              >&2 echo ""
-              >&2 echo "  1. Stop the current machine:"
-              >&2 echo "     podman machine stop $MACHINE_NAME"
-              >&2 echo ""
-              >&2 echo "  2. Delete the machine (⚠️  This will remove all data):"
-              >&2 echo "     podman machine rm $MACHINE_NAME"
-              >&2 echo ""
-              >&2 echo "  3. Recreate with DevPod (auto-init must be enabled):"
-              >&2 echo "     devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true"
-              >&2 echo "     devpod up <your-workspace> --provider podman"
-              >&2 echo ""
-              >&2 echo "Or manually create with specific resources:"
-              >&2 echo "  podman machine init $MACHINE_NAME \\"
-              >&2 echo "    --cpus $DESIRED_CPUS \\"
-              >&2 echo "    --memory $DESIRED_MEMORY \\"
-              >&2 echo "    --disk-size $DESIRED_DISK"
-              >&2 echo ""
-              >&2 echo "Continuing with existing machine configuration..."
-              >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              >&2 echo ""
+              if [ "${PODMAN_MACHINE_AUTO_RESOURCE_UPDATE:-false}" = "true" ]; then
+                # Automatic resource update
+                echo ""
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo "🔧 Applying resource configuration updates to machine '$MACHINE_NAME'..."
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo ""
+                echo "Current configuration:"
+                echo "  • CPUs: $CURRENT_CPUS"
+                echo "  • Memory: ${CURRENT_MEMORY}MB"
+                echo "  • Disk Size: ${CURRENT_DISK}GB"
+                echo "  • Rootful: $NORM_CURRENT_ROOTFUL"
+                echo ""
+                echo "Desired configuration:"
+                echo "  • CPUs: $DESIRED_CPUS"
+                echo "  • Memory: ${DESIRED_MEMORY}MB"
+                echo "  • Disk Size: ${DESIRED_DISK}GB"
+                echo "  • Rootful: $DESIRED_ROOTFUL"
+                echo ""
+
+                # Check for disk size decrease (not supported)
+                if [ "$MISMATCH_DISK" = true ] && [ "$DESIRED_DISK" -lt "$CURRENT_DISK" ]; then
+                  >&2 echo "❌ Error: Cannot decrease disk size from ${CURRENT_DISK}GB to ${DESIRED_DISK}GB"
+                  >&2 echo "Disk size can only be increased, not decreased."
+                  >&2 echo ""
+                  >&2 echo "Options:"
+                  >&2 echo "  1. Keep current disk size (${CURRENT_DISK}GB)"
+                  >&2 echo "  2. Recreate machine with smaller disk (⚠️  Data loss)"
+                  >&2 echo ""
+                  >&2 echo "Continuing with other resource updates..."
+                  >&2 echo ""
+                  MISMATCH_DISK=false
+                fi
+
+                # Stop machine for resource updates
+                echo "Stopping machine '$MACHINE_NAME'..."
+                if ! ${PODMAN_PATH} machine stop "$MACHINE_NAME" 2>&1; then
+                  >&2 echo ""
+                  >&2 echo "❌ Error: Failed to stop machine"
+                  >&2 echo "Cannot proceed with resource updates."
+                  exit 1
+                fi
+
+                # Apply resource updates
+                UPDATE_SUCCESS=true
+
+                if [ "$MISMATCH_CPUS" = true ]; then
+                  echo "Updating CPUs to ${DESIRED_CPUS}..."
+                  if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --cpus "$DESIRED_CPUS" 2>&1; then
+                    >&2 echo "⚠️  Warning: Failed to update CPUs"
+                    UPDATE_SUCCESS=false
+                  fi
+                fi
+
+                if [ "$MISMATCH_MEMORY" = true ]; then
+                  echo "Updating memory to ${DESIRED_MEMORY}MB..."
+                  if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --memory "$DESIRED_MEMORY" 2>&1; then
+                    >&2 echo "⚠️  Warning: Failed to update memory"
+                    UPDATE_SUCCESS=false
+                  fi
+                fi
+
+                if [ "$MISMATCH_DISK" = true ]; then
+                  echo "Updating disk size to ${DESIRED_DISK}GB..."
+                  if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --disk-size "$DESIRED_DISK" 2>&1; then
+                    >&2 echo "⚠️  Warning: Failed to update disk size"
+                    UPDATE_SUCCESS=false
+                  fi
+                fi
+
+                if [ "$MISMATCH_ROOTFUL" = true ]; then
+                  echo "Updating rootful mode to ${DESIRED_ROOTFUL}..."
+                  if [ "$DESIRED_ROOTFUL" = "true" ]; then
+                    if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --rootful 2>&1; then
+                      >&2 echo "⚠️  Warning: Failed to update rootful mode"
+                      UPDATE_SUCCESS=false
+                    fi
+                  else
+                    if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --rootful=false 2>&1; then
+                      >&2 echo "⚠️  Warning: Failed to update rootful mode"
+                      UPDATE_SUCCESS=false
+                    fi
+                  fi
+                fi
+
+                # Restart machine
+                echo ""
+                echo "Starting machine '$MACHINE_NAME' with updated configuration..."
+                if ! ${PODMAN_PATH} machine start "$MACHINE_NAME" 2>&1; then
+                  >&2 echo ""
+                  >&2 echo "❌ Error: Failed to start machine after resource updates"
+                  >&2 echo "Machine state may be inconsistent. Please check:"
+                  >&2 echo "  podman machine list"
+                  >&2 echo "  podman machine inspect $MACHINE_NAME"
+                  exit 1
+                fi
+
+                # Wait for machine to be ready
+                TIMEOUT=${PODMAN_MACHINE_START_TIMEOUT:-60}
+                ELAPSED=0
+                echo "Waiting for machine to be ready (timeout: ${TIMEOUT}s)..."
+
+                while [ $ELAPSED -lt $TIMEOUT ]; do
+                  if ${PODMAN_PATH} ps >/dev/null 2>&1; then
+                    echo "Machine ready after ${ELAPSED}s"
+                    break
+                  fi
+                  sleep 2
+                  ELAPSED=$((ELAPSED + 2))
+                done
+
+                if [ $ELAPSED -ge $TIMEOUT ]; then
+                  >&2 echo "❌ Error: Machine start timed out after ${TIMEOUT}s"
+                  exit 1
+                fi
+
+                # Verify updates
+                echo ""
+                echo "Verifying updated configuration..."
+                UPDATED_INFO=$(${PODMAN_PATH} machine inspect "$MACHINE_NAME" 2>/dev/null)
+                if [ $? -eq 0 ] && [ -n "$UPDATED_INFO" ]; then
+                  UPDATED_CPUS=$(echo "$UPDATED_INFO" | grep -o '"CPUs": *[0-9]*' | awk '{print $2}')
+                  UPDATED_MEMORY=$(echo "$UPDATED_INFO" | grep -o '"Memory": *[0-9]*' | awk '{print $2}')
+                  UPDATED_DISK=$(echo "$UPDATED_INFO" | grep -o '"DiskSize": *[0-9]*' | awk '{print $2}')
+                  UPDATED_ROOTFUL=$(echo "$UPDATED_INFO" | grep -o '"Rootful": *[a-z]*' | awk '{print $2}')
+
+                  echo "Updated configuration:"
+                  echo "  • CPUs: $UPDATED_CPUS"
+                  echo "  • Memory: ${UPDATED_MEMORY}MB"
+                  echo "  • Disk Size: ${UPDATED_DISK}GB"
+                  echo "  • Rootful: $UPDATED_ROOTFUL"
+                fi
+
+                if [ "$UPDATE_SUCCESS" = true ]; then
+                  echo ""
+                  echo "✅ Resource configuration updated successfully!"
+                else
+                  >&2 echo ""
+                  >&2 echo "⚠️  Some resource updates failed. Check logs above."
+                fi
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo ""
+              else
+                # Display warning with non-destructive update options
+                >&2 echo ""
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo "⚠️  WARNING: Machine resource configuration mismatch detected"
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "The Podman Machine '$MACHINE_NAME' exists with different resource"
+                >&2 echo "settings than requested."
+                >&2 echo ""
+                >&2 echo "Configuration differences:"
+                >&2 echo -e "$MISMATCHES"
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "OPTION 1: Update in-place (Non-destructive, recommended)"
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "Use 'podman machine set' to update resources without data loss:"
+                >&2 echo ""
+                >&2 echo "  podman machine stop $MACHINE_NAME"
+
+                if [ "$MISMATCH_CPUS" = true ]; then
+                  >&2 echo "  podman machine set $MACHINE_NAME --cpus $DESIRED_CPUS"
+                fi
+                if [ "$MISMATCH_MEMORY" = true ]; then
+                  >&2 echo "  podman machine set $MACHINE_NAME --memory $DESIRED_MEMORY"
+                fi
+                if [ "$MISMATCH_DISK" = true ]; then
+                  if [ "$DESIRED_DISK" -lt "$CURRENT_DISK" ]; then
+                    >&2 echo "  # ⚠️  Disk size cannot be decreased (current: ${CURRENT_DISK}GB, desired: ${DESIRED_DISK}GB)"
+                  else
+                    >&2 echo "  podman machine set $MACHINE_NAME --disk-size $DESIRED_DISK"
+                  fi
+                fi
+                if [ "$MISMATCH_ROOTFUL" = true ]; then
+                  if [ "$DESIRED_ROOTFUL" = "true" ]; then
+                    >&2 echo "  podman machine set $MACHINE_NAME --rootful"
+                  else
+                    >&2 echo "  podman machine set $MACHINE_NAME --rootful=false"
+                  fi
+                fi
+
+                >&2 echo "  podman machine start $MACHINE_NAME"
+                >&2 echo ""
+                >&2 echo "Or enable automatic updates:"
+                >&2 echo "  devpod provider set-options podman PODMAN_MACHINE_AUTO_RESOURCE_UPDATE=true"
+                >&2 echo ""
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "OPTION 2: Recreate machine (Destructive)"
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "  1. Stop and delete the machine (⚠️  This will remove all data):"
+                >&2 echo "     podman machine stop $MACHINE_NAME"
+                >&2 echo "     podman machine rm $MACHINE_NAME"
+                >&2 echo ""
+                >&2 echo "  2. Recreate with DevPod (auto-init must be enabled):"
+                >&2 echo "     devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true"
+                >&2 echo "     devpod up <your-workspace> --provider podman"
+                >&2 echo ""
+                >&2 echo "  Or manually create with specific resources:"
+                >&2 echo "     podman machine init $MACHINE_NAME \\"
+                >&2 echo "       --cpus $DESIRED_CPUS \\"
+                >&2 echo "       --memory $DESIRED_MEMORY \\"
+                >&2 echo "       --disk-size $DESIRED_DISK"
+                if [ "$DESIRED_ROOTFUL" = "true" ]; then
+                  >&2 echo "       --rootful"
+                fi
+                >&2 echo ""
+                >&2 echo "Continuing with existing machine configuration..."
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+              fi
             fi
           fi
         fi
