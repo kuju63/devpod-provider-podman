@@ -51,7 +51,7 @@ options:
 
   PODMAN_MACHINE_MEMORY:
     description: "Memory in MB to allocate to Podman Machine. Only used during machine creation."
-    default: "2048"
+    default: "4096"
 
   PODMAN_MACHINE_DISK_SIZE:
     description: "Disk size in GB to allocate to Podman Machine. Only used during machine creation."
@@ -106,7 +106,7 @@ exec:
 
           INIT_CMD="${PODMAN_PATH} machine init \"$MACHINE_NAME\""
           INIT_CMD="$INIT_CMD --cpus ${PODMAN_MACHINE_CPUS:-2}"
-          INIT_CMD="$INIT_CMD --memory ${PODMAN_MACHINE_MEMORY:-2048}"
+          INIT_CMD="$INIT_CMD --memory ${PODMAN_MACHINE_MEMORY:-4096}"
           INIT_CMD="$INIT_CMD --disk-size ${PODMAN_MACHINE_DISK_SIZE:-100}"
 
           if [ "${PODMAN_MACHINE_ROOTFUL:-false}" = "true" ]; then
@@ -183,7 +183,7 @@ exec:
 
             # Get desired configuration (with defaults)
             DESIRED_CPUS="${PODMAN_MACHINE_CPUS:-2}"
-            DESIRED_MEMORY="${PODMAN_MACHINE_MEMORY:-2048}"
+            DESIRED_MEMORY="${PODMAN_MACHINE_MEMORY:-4096}"
             DESIRED_DISK="${PODMAN_MACHINE_DISK_SIZE:-100}"
             DESIRED_ROOTFUL="${PODMAN_MACHINE_ROOTFUL:-false}"
 

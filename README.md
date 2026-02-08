@@ -91,7 +91,7 @@ devpod delete <workspace-name>
 | オプション | 説明 | デフォルト値 |
 |-----------|------|-------------|
 | `PODMAN_MACHINE_CPUS` | CPU数 | `2` |
-| `PODMAN_MACHINE_MEMORY` | メモリ（MB） | `2048` |
+| `PODMAN_MACHINE_MEMORY` | メモリ（MB） | `4096` |
 | `PODMAN_MACHINE_DISK_SIZE` | ディスク（GB） | `100` |
 | `PODMAN_MACHINE_ROOTFUL` | rootfulモード（特権操作許可、低セキュリティ） | `false` |
 
