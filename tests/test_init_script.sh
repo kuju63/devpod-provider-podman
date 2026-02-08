@@ -36,6 +36,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   MACHINE_NAME="${PODMAN_MACHINE_NAME:-}"
   if [ -z "$MACHINE_NAME" ]; then
     MACHINE_NAME=$(${PODMAN_PATH} machine list --format '{{.Name}}' --noheading 2>/dev/null | head -n1 || echo "")
+    MACHINE_NAME="${MACHINE_NAME%\*}"  # Remove trailing asterisk from active machine
     if [ -n "$MACHINE_NAME" ]; then
       echo "✓ Auto-detected machine: $MACHINE_NAME"
     fi
