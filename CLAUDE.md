@@ -12,6 +12,7 @@ DevPod向けのPodmanプロバイダー実装。DevPodはオープンソース�
 - ✅ **Phase 2完成** (v0.1.0): macOS Podman Machine自動管理とリソース設定
 - ✅ **Phase 3完成**: リソース設定ミスマッチ警告
 - ✅ **Phase 4完成** (v0.2.0): in-placeリソース更新（`podman machine set`対応）
+- ✅ **v0.2.1リリース**: Machine名検出バグ修正（アスタリスク除去対応）
 
 ## 開発フロー
 
