@@ -1,152 +1,154 @@
 # DevPod Podman Provider
 
-DevPod向けのPodmanプロバイダー実装 / Podman Provider for DevPod
+**Languages / 言語:** [English](README.md) | [日本語](README.ja.md)
 
-## 概要
+Podman Provider for DevPod
 
-このプロジェクトは、[DevPod](https://devpod.sh/)向けのPodmanコンテナエンジン用プロバイダーを提供します。DevPodはクライアントサイドで動作するオープンソースの開発環境管理ツールで、このプロバイダーを使用することでPodmanコンテナを使った開発ワークスペースを管理できます。
+## Overview
 
-## 機能
+This project provides a Podman container engine provider for [DevPod](https://devpod.sh/). DevPod is an open-source client-side development environment management tool, and this provider enables you to manage development workspaces using Podman containers.
 
-- ✅ Podmanコンテナでの開発環境作成と管理
-- ✅ macOSでのPodman Machine自動管理
-- ✅ Machine自動起動・自動作成
-- ✅ リソース設定（CPU、メモリ、ディスク）のカスタマイズ
-- ✅ リソースの非破壊的in-place更新（`podman machine set`対応）
-- ✅ rootful/rootlessモードの選択
-- ✅ 非アクティブタイムアウトによる自動停止
-- ✅ 詳細なエラーメッセージとガイダンス
+## Features
 
-## 前提条件
+- ✅ Create and manage development environments with Podman containers
+- ✅ Automatic Podman Machine management on macOS
+- ✅ Automatic Machine startup and initialization
+- ✅ Customizable resource configuration (CPU, memory, disk)
+- ✅ Non-destructive in-place resource updates (`podman machine set` support)
+- ✅ Rootful/rootless mode selection
+- ✅ Automatic stop on inactivity timeout
+- ✅ Detailed error messages and guidance
+
+## Prerequisites
 
 ### macOS
 
-1. **Podmanのインストール**:
+1. **Install Podman**:
    ```bash
    brew install podman
    ```
 
-2. **DevPod CLIのインストール**:
+2. **Install DevPod CLI**:
    ```bash
    brew install devpod
    ```
 
-**注意**: Podman Machineの初期化と起動は、デフォルトで自動的に行われます（`PODMAN_MACHINE_AUTO_START=true`）。初回実行時にMachineを自動作成したい場合は、`PODMAN_MACHINE_AUTO_INIT=true`を設定してください。
+**Note**: Podman Machine initialization and startup are handled automatically by default (`PODMAN_MACHINE_AUTO_START=true`). If you want to automatically create the Machine on first run, set `PODMAN_MACHINE_AUTO_INIT=true`.
 
-## 使い方
+## Usage
 
-### プロバイダーの追加
+### Add the Provider
 
-#### ローカル開発版
+#### Local Development Version
 ```bash
 cd /path/to/podman-provider
 devpod provider add ./provider.yaml
 devpod provider use podman
 ```
 
-#### GitHub経由（公開後）
+#### Via GitHub (After Publication)
 ```bash
 devpod provider add https://github.com/kuju63/devpod-provider-podman
 devpod provider use podman
 ```
 
-### ワークスペースの作成
+### Create a Workspace
 ```bash
-# サンプルリポジトリで試す
+# Try with sample repository
 devpod up https://github.com/loft-sh/devpod-example-go --provider podman
 
-# 自分のリポジトリを使う
+# Use your own repository
 devpod up https://github.com/your/repository --provider podman
 ```
 
-### ワークスペースへの接続
+### Connect to a Workspace
 ```bash
 devpod ssh <workspace-name>
 ```
 
-### ワークスペースの削除
+### Delete a Workspace
 ```bash
 devpod delete <workspace-name>
 ```
 
-## 設定オプション
+## Configuration Options
 
-### 基本オプション
+### Basic Options
 
-| オプション | 説明 | デフォルト値 |
-|-----------|------|-------------|
-| `PODMAN_PATH` | Podmanバイナリのパス | `podman` |
-| `INACTIVITY_TIMEOUT` | 非アクティブ時の自動停止時間（例: 10m, 1h） | なし |
+| Option | Description | Default Value |
+|--------|-------------|---------------|
+| `PODMAN_PATH` | Path to Podman binary | `podman` |
+| `INACTIVITY_TIMEOUT` | Auto-stop time on inactivity (e.g., 10m, 1h) | None |
 
-### Machine管理（macOSのみ）
+### Machine Management (macOS Only)
 
-| オプション | 説明 | デフォルト値 |
-|-----------|------|-------------|
-| `PODMAN_MACHINE_AUTO_START` | 停止中のMachineを自動起動 | `true` |
-| `PODMAN_MACHINE_AUTO_INIT` | Machine未作成時に自動作成 | `false` |
-| `PODMAN_MACHINE_NAME` | 使用するMachine名（空白で自動検出） | 自動検出 |
-| `PODMAN_MACHINE_START_TIMEOUT` | 起動タイムアウト（秒） | `60` |
+| Option | Description | Default Value |
+|--------|-------------|---------------|
+| `PODMAN_MACHINE_AUTO_START` | Automatically start stopped Machine | `true` |
+| `PODMAN_MACHINE_AUTO_INIT` | Automatically create Machine if not exists | `false` |
+| `PODMAN_MACHINE_NAME` | Machine name to use (empty for auto-detection) | Auto-detect |
+| `PODMAN_MACHINE_START_TIMEOUT` | Startup timeout (seconds) | `60` |
 
-### Machineリソース設定
+### Machine Resource Configuration
 
-| オプション | 説明 | デフォルト値 |
-|-----------|------|-------------|
-| `PODMAN_MACHINE_CPUS` | CPU数 | `2` |
-| `PODMAN_MACHINE_MEMORY` | メモリ（MB） | `4096` |
-| `PODMAN_MACHINE_DISK_SIZE` | ディスク（GB） | `100` |
-| `PODMAN_MACHINE_ROOTFUL` | rootfulモード（特権操作許可、低セキュリティ） | `false` |
-| `PODMAN_MACHINE_AUTO_RESOURCE_UPDATE` | リソース設定の不一致を検出時に自動更新（非破壊的） | `false` |
+| Option | Description | Default Value |
+|--------|-------------|---------------|
+| `PODMAN_MACHINE_CPUS` | Number of CPUs | `2` |
+| `PODMAN_MACHINE_MEMORY` | Memory (MB) | `4096` |
+| `PODMAN_MACHINE_DISK_SIZE` | Disk size (GB) | `100` |
+| `PODMAN_MACHINE_ROOTFUL` | Rootful mode (privileged operations, lower security) | `false` |
+| `PODMAN_MACHINE_AUTO_RESOURCE_UPDATE` | Auto-update on resource mismatch detection (non-destructive) | `false` |
 
-### オプションの設定例
+### Configuration Examples
 
 ```bash
-# 基本設定
+# Basic configuration
 devpod provider set-options podman PODMAN_PATH=/opt/homebrew/bin/podman
 
-# 完全自動化の有効化
+# Enable full automation
 devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true
 
-# リソース設定（次回Machine作成時に適用）
+# Resource configuration (applied on next Machine creation)
 devpod provider set-options podman \
   PODMAN_MACHINE_CPUS=4 \
   PODMAN_MACHINE_MEMORY=8192 \
   PODMAN_MACHINE_DISK_SIZE=200
 ```
 
-## 自動Machine管理（macOS）
+## Automatic Machine Management (macOS)
 
-このプロバイダーは、macOSでPodman Machineを自動的に管理します：
+This provider automatically manages Podman Machine on macOS:
 
-### デフォルト動作
+### Default Behavior
 
-- **自動起動**: 停止中のMachineを自動起動（`PODMAN_MACHINE_AUTO_START=true`）
-- **手動作成**: Machine未作成時はエラー表示（`PODMAN_MACHINE_AUTO_INIT=false`）
+- **Auto-start**: Automatically starts stopped Machine (`PODMAN_MACHINE_AUTO_START=true`)
+- **Manual creation**: Shows error when Machine doesn't exist (`PODMAN_MACHINE_AUTO_INIT=false`)
 
-### 完全自動化
+### Full Automation
 
-初回実行時にMachineを自動作成したい場合:
+To automatically create Machine on first run:
 
 ```bash
 devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true
 ```
 
-この設定により、Podman Machineの手動セットアップが不要になります。
+This eliminates the need for manual Podman Machine setup.
 
-### Machine名の指定
+### Specifying Machine Name
 
-複数のMachineを使い分ける場合:
+When using multiple Machines:
 
 ```bash
 devpod provider set-options podman PODMAN_MACHINE_NAME=my-machine
 ```
 
-指定しない場合は、最初に見つかったMachineを自動的に使用します。
+If not specified, the first found Machine will be automatically used.
 
-## リソース設定
+## Resource Configuration
 
-### 用途別推奨設定
+### Recommended Settings by Use Case
 
-**軽量開発（フロントエンドなど）:**
+**Lightweight Development (Frontend, etc.):**
 ```bash
 devpod provider set-options podman \
   PODMAN_MACHINE_CPUS=2 \
@@ -154,7 +156,7 @@ devpod provider set-options podman \
   PODMAN_MACHINE_DISK_SIZE=50
 ```
 
-**標準開発（バックエンド、フルスタック）:**
+**Standard Development (Backend, Full-stack):**
 ```bash
 devpod provider set-options podman \
   PODMAN_MACHINE_CPUS=4 \
@@ -162,7 +164,7 @@ devpod provider set-options podman \
   PODMAN_MACHINE_DISK_SIZE=100
 ```
 
-**ヘビー開発（ビルド、マルチサービス）:**
+**Heavy Development (Build, Multi-service):**
 ```bash
 devpod provider set-options podman \
   PODMAN_MACHINE_CPUS=8 \
@@ -170,174 +172,174 @@ devpod provider set-options podman \
   PODMAN_MACHINE_DISK_SIZE=200
 ```
 
-### リソース変更方法
+### How to Change Resources
 
-既存のPodman Machineのリソース設定を変更する方法は2つあります：
+There are two ways to change resource configuration of existing Podman Machine:
 
-#### 方法1: 非破壊的in-place更新（推奨）
+#### Method 1: Non-destructive In-place Update (Recommended)
 
-既存のMachineをそのまま保持してリソースを更新できます。データ損失なし。
+Update resources while preserving the existing Machine. No data loss.
 
-**自動更新**:
+**Automatic Update**:
 ```bash
-# 自動更新を有効化
+# Enable automatic updates
 devpod provider set-options podman PODMAN_MACHINE_AUTO_RESOURCE_UPDATE=true
 
-# リソース設定を変更
+# Change resource configuration
 devpod provider set-options podman \
   PODMAN_MACHINE_CPUS=4 \
   PODMAN_MACHINE_MEMORY=8192
 
-# 次回のdevpod up時に自動的にリソースが更新されます
+# Resources will be automatically updated on next devpod up
 devpod up <your-repo> --provider podman
 ```
 
-**手動更新**:
+**Manual Update**:
 ```bash
-# Machineを停止
+# Stop Machine
 podman machine stop
 
-# リソースを更新（必要な項目のみ）
+# Update resources (only desired items)
 podman machine set <machine-name> --cpus 4
 podman machine set <machine-name> --memory 8192
-podman machine set <machine-name> --disk-size 150  # 増加のみ可能
+podman machine set <machine-name> --disk-size 150  # Can only increase
 
-# Machineを起動
+# Start Machine
 podman machine start
 ```
 
-**注意**: ディスクサイズは増加のみ可能で、減少はできません。
+**Note**: Disk size can only be increased, not decreased.
 
-#### 方法2: Machine再作成（破壊的）
+#### Method 2: Machine Recreation (Destructive)
 
-完全に新しいMachineを作成します。すべてのデータが削除されます。
+Create a completely new Machine. All data will be deleted.
 
 ```bash
-# 1. オプションを設定
+# 1. Set options
 devpod provider set-options podman PODMAN_MACHINE_MEMORY=8192
 
-# 2. 既存のMachineを削除（⚠️ データ損失）
+# 2. Delete existing Machine (⚠️ Data loss)
 podman machine stop
 podman machine rm
 
-# 3. 新しいMachineを作成（次回のdevpod up時に自動作成）
+# 3. Create new Machine (auto-created on next devpod up)
 devpod up <your-repo> --provider podman
 ```
 
-**注意**: 自動作成（`AUTO_INIT=true`）を有効にしている場合、Machine削除後に次回の`devpod up`で新しい設定が適用されたMachineが自動作成されます。
+**Note**: If automatic creation (`AUTO_INIT=true`) is enabled, a new Machine with the new configuration will be automatically created on the next `devpod up` after Machine deletion.
 
-## トラブルシューティング
+## Troubleshooting
 
-### "No Podman Machine found" エラー
+### "No Podman Machine found" Error
 
-**原因**: Podman Machineが作成されていない（macOS）
+**Cause**: Podman Machine has not been created (macOS)
 
-**解決方法1 - 手動作成**:
+**Solution 1 - Manual Creation**:
 ```bash
 podman machine init
 podman machine start
 ```
 
-**解決方法2 - 自動作成の有効化**:
+**Solution 2 - Enable Auto-creation**:
 ```bash
 devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true
 ```
 
-### "Podman Machine is not running" エラー
+### "Podman Machine is not running" Error
 
-**原因**: Machineが停止している
+**Cause**: Machine is stopped
 
-**解決方法1 - 手動起動**:
+**Solution 1 - Manual Start**:
 ```bash
 podman machine start
 ```
 
-**解決方法2 - 自動起動の有効化（デフォルトで有効）**:
+**Solution 2 - Enable Auto-start (Enabled by Default)**:
 ```bash
 devpod provider set-options podman PODMAN_MACHINE_AUTO_START=true
 ```
 
-### "Machine start timed out" エラー
+### "Machine start timed out" Error
 
-**原因**: Machineの起動に時間がかかっている
+**Cause**: Machine startup is taking longer than expected
 
-**解決方法**:
+**Solution**:
 ```bash
-# タイムアウトを120秒に延長
+# Extend timeout to 120 seconds
 devpod provider set-options podman PODMAN_MACHINE_START_TIMEOUT=120
 ```
 
-**診断**:
+**Diagnosis**:
 ```bash
-# Machine の状態確認
+# Check Machine status
 podman machine list
 podman machine inspect <machine-name>
 
-# 手動起動でログ確認
+# Manually start and check logs
 podman machine start <machine-name>
 ```
 
-### Machine作成/起動が失敗する
+### Machine Creation/Startup Failure
 
-**解決方法**:
+**Solution**:
 ```bash
-# 既存のMachineを削除して再作成
+# Delete existing Machine and recreate
 podman machine stop
 podman machine rm
 
-# 手動で再作成
+# Recreate manually
 podman machine init
 podman machine start
 
-# または自動作成に任せる
+# Or let auto-creation handle it
 devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true
 devpod up <your-repo> --provider podman
 ```
 
-### 複数Machineの管理
+### Managing Multiple Machines
 
-複数のPodman Machineを使い分ける場合:
+When using multiple Podman Machines:
 
 ```bash
-# Machine一覧表示
+# List Machines
 podman machine list
 
-# 特定のMachineを指定
+# Specify a particular Machine
 devpod provider set-options podman PODMAN_MACHINE_NAME=my-machine
 
-# デフォルトに戻す（自動検出）
+# Revert to default (auto-detection)
 devpod provider set-options podman PODMAN_MACHINE_NAME=""
 ```
 
-### リソース設定ミスマッチの警告
+### Resource Configuration Mismatch Warning
 
-**原因**: 既存のMachineが要求されたリソース設定と異なる
+**Cause**: Existing Machine differs from requested resource configuration
 
-**現象**: 起動時に警告メッセージが表示される
+**Symptom**: Warning message displayed on startup
 
-**解決方法1 - 自動更新の有効化（推奨）**:
+**Solution 1 - Enable Auto-update (Recommended)**:
 ```bash
 devpod provider set-options podman PODMAN_MACHINE_AUTO_RESOURCE_UPDATE=true
 ```
 
-**解決方法2 - 手動で更新**:
-警告メッセージに表示される`podman machine set`コマンドを実行してください。
+**Solution 2 - Manual Update**:
+Run the `podman machine set` commands shown in the warning message.
 
-**解決方法3 - 現在の設定を維持**:
-警告を無視して既存のMachine設定のまま使用できます。
+**Solution 3 - Keep Current Configuration**:
+Ignore the warning and continue using the existing Machine configuration.
 
-## ライセンス
+## License
 
-このプロジェクトは[Apache License 2.0](LICENSE)の下でライセンスされています。
+This project is licensed under the [Apache License 2.0](LICENSE).
 
-## 参考リンク
+## References
 
-- [DevPod公式サイト](https://devpod.sh/)
-- [DevPod Provider開発ガイド](https://devpod.sh/docs/developing-providers/quickstart)
-- [Podman公式サイト](https://podman.io/)
+- [DevPod Official Site](https://devpod.sh/)
+- [DevPod Provider Development Guide](https://devpod.sh/docs/developing-providers/quickstart)
+- [Podman Official Site](https://podman.io/)
 
-## 開発
+## Development
 
-プロジェクトへの貢献を歓迎します。詳細は[CLAUDE.md](CLAUDE.md)を参照してください。
+Contributions to this project are welcome. See [CLAUDE.md](CLAUDE.md) for details.
 
-新しい機能やプラットフォームのサポートを追加する際は、必ずGitHub Issueを作成してissue駆動開発を行ってください。
+When adding new features or platform support, please create a GitHub Issue and follow issue-driven development.

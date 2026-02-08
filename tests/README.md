@@ -1,116 +1,118 @@
-# DevPod Podman Provider - テストスイート
+# DevPod Podman Provider - Test Suite
 
-このディレクトリには、Phase 2実装のテストスクリプトが含まれています。
+**Languages / 言語:** [English](README.md) | [日本語](README.ja.md)
 
-## テストスクリプト
+This directory contains test scripts for the Phase 2 implementation.
+
+## Test Scripts
 
 ### 1. `test_init_script.sh`
-初期化スクリプトの基本動作をテストします。
+Tests basic operations of the initialization script.
 
-**テスト内容:**
-- Podmanバイナリの存在確認
-- Podmanバージョン取得
-- プラットフォーム検出（macOS/Linux）
-- Machine名の自動検出
-- Machine状態確認
-- 接続テスト
+**Test Coverage:**
+- Podman binary existence check
+- Podman version retrieval
+- Platform detection (macOS/Linux)
+- Automatic Machine name detection
+- Machine state verification
+- Connection test
 
-**実行方法:**
+**Execution:**
 ```bash
 cd tests
 chmod +x test_init_script.sh
 ./test_init_script.sh
 ```
 
-**期待される結果:**
-- すべてのチェックマーク（✓）が表示される
-- エラーなく完了
+**Expected Results:**
+- All checks display checkmarks (✓)
+- Completes without errors
 
 ### 2. `integration_test.sh`
-DevPodプロバイダーとしての統合テストを実行します。
+Executes integration tests as a DevPod provider.
 
-**テスト内容:**
-- プロバイダー登録
-- オプション一覧の確認
-- カスタムオプション設定
-- オプション値の検証
-- クリーンアップ
+**Test Coverage:**
+- Provider registration
+- Options list verification
+- Custom option configuration
+- Option value validation
+- Cleanup
 
-**実行方法:**
+**Execution:**
 ```bash
 cd tests
 chmod +x integration_test.sh
 ./integration_test.sh
 ```
 
-**期待される結果:**
-- 4つのテストすべてが成功（✓）
-- クリーンアップ完了
+**Expected Results:**
+- All 4 tests succeed (✓)
+- Cleanup completes
 
 ### 3. `test_mismatch_detection.sh`
-リソース設定の不一致検出ロジックをテストします（Phase 3追加）。
+Tests resource configuration mismatch detection logic (Phase 3 addition).
 
-**テスト内容:**
-- CPU設定の不一致検出
-- メモリ設定の不一致検出
-- ディスクサイズの不一致検出
-- rootfulモード設定の不一致検出
-- 複数の不一致同時検出
-- 設定が一致する場合の判定
-- rootful値の正規化（true/false/1の正規化）
+**Test Coverage:**
+- CPU configuration mismatch detection
+- Memory configuration mismatch detection
+- Disk size mismatch detection
+- Rootful mode configuration mismatch detection
+- Multiple simultaneous mismatch detection
+- Matching configuration validation
+- Rootful value normalization (true/false/1 normalization)
 
-**実行方法:**
+**Execution:**
 ```bash
 cd tests
 chmod +x test_mismatch_detection.sh
 ./test_mismatch_detection.sh
 ```
 
-**期待される結果:**
-- すべてのテストが成功（✓ 7/7）
-- 各テストで正しく不一致/一致を検出
+**Expected Results:**
+- All tests succeed (✓ 7/7)
+- Each test correctly detects mismatch/match
 
-## 前提条件
+## Prerequisites
 
-テストを実行する前に、以下がインストールされている必要があります：
+Before running tests, the following must be installed:
 
 - **Podman**: `brew install podman`
 - **DevPod**: `brew install devpod`
-- **macOS**: Podman Machine機能をテストするため（Linuxでも基本テストは動作）
+- **macOS**: Required for testing Podman Machine functionality (basic tests work on Linux)
 
-## テスト環境
+## Test Environment
 
-テストは以下の環境で検証済みです：
+Tests have been verified in the following environment:
 
 - macOS (Darwin)
-- Podman 5.x以降
-- DevPod 0.5.x以降
+- Podman 5.x or later
+- DevPod 0.5.x or later
 
-## トラブルシューティング
+## Troubleshooting
 
-### テストが失敗する場合
+### Test Failures
 
-1. **Podman Machineが起動していない**
+1. **Podman Machine is not running**
    ```bash
    podman machine start
    ```
 
-2. **古いテストプロバイダーが残っている**
+2. **Old test provider remains**
    ```bash
    devpod provider delete podman-phase2-test
    ```
 
-3. **権限エラー**
+3. **Permission errors**
    ```bash
    chmod +x tests/*.sh
    ```
 
-## CI/CD統合
+## CI/CD Integration
 
-これらのテストは、GitHub ActionsなどのCI/CDパイプラインに統合できます。
+These tests can be integrated into CI/CD pipelines such as GitHub Actions.
 
 ```yaml
-# .github/workflows/test.yml の例
+# Example .github/workflows/test.yml
 - name: Run tests
   run: |
     chmod +x tests/*.sh
@@ -118,24 +120,24 @@ chmod +x test_mismatch_detection.sh
     ./tests/integration_test.sh
 ```
 
-## 手動テストシナリオ
+## Manual Test Scenarios
 
-自動化されたテストに加えて、以下のシナリオも手動でテストすることを推奨します：
+In addition to automated tests, the following scenarios are recommended for manual testing:
 
-### TS1: Machine未作成環境
+### TS1: Machine Not Created Environment
 ```bash
-# Machineを削除
+# Delete Machine
 podman machine stop
 podman machine rm
 
-# AUTO_INIT=false（デフォルト）でエラーメッセージ確認
+# Verify error message with AUTO_INIT=false (default)
 devpod provider add ./provider.yaml
 
-# AUTO_INIT=trueで自動作成
+# Auto-create with AUTO_INIT=true
 devpod provider set-options podman -o PODMAN_MACHINE_AUTO_INIT=true
 ```
 
-### TS2: カスタムリソース設定
+### TS2: Custom Resource Configuration
 ```bash
 devpod provider set-options podman \
   -o PODMAN_MACHINE_CPUS=4 \
@@ -143,97 +145,97 @@ devpod provider set-options podman \
   -o PODMAN_MACHINE_DISK_SIZE=200 \
   -o PODMAN_MACHINE_AUTO_INIT=true
 
-# Machineを再作成
+# Recreate Machine
 podman machine rm
 devpod up <test-repo> --provider podman
 
-# リソース確認
+# Verify resources
 podman machine inspect
 ```
 
-### TS3: 停止中Machine自動起動
+### TS3: Stopped Machine Auto-start
 ```bash
-# Machineを停止
+# Stop Machine
 podman machine stop
 
-# DevPodでワークスペース作成（自動起動される）
+# Create workspace with DevPod (auto-starts)
 devpod up <test-repo> --provider podman
 ```
 
-### TS4: 複数Machine環境
+### TS4: Multiple Machine Environment
 ```bash
-# 複数のMachineを作成
+# Create multiple Machines
 podman machine init machine1
 podman machine init machine2
 
-# 特定のMachineを指定
+# Specify particular Machine
 devpod provider set-options podman -o PODMAN_MACHINE_NAME=machine1
 ```
 
-### TS5: タイムアウトテスト
+### TS5: Timeout Test
 ```bash
-# 短いタイムアウトを設定
+# Set short timeout
 devpod provider set-options podman -o PODMAN_MACHINE_START_TIMEOUT=5
 
-# Machineを停止して起動テスト
+# Stop Machine and test startup
 podman machine stop
 devpod up <test-repo> --provider podman
 ```
 
-### TS6: rootfulモード
+### TS6: Rootful Mode
 ```bash
-# rootfulモードでMachine作成
+# Create Machine in rootful mode
 devpod provider set-options podman \
   -o PODMAN_MACHINE_ROOTFUL=true \
   -o PODMAN_MACHINE_AUTO_INIT=true
 
-# Machine削除後に再作成
+# Recreate after Machine deletion
 podman machine rm
 devpod up <test-repo> --provider podman
 
-# rootful設定確認
+# Verify rootful configuration
 podman machine inspect | grep -i rootful
 ```
 
-### TS7: リソース設定変更警告（Phase 3追加）
+### TS7: Resource Configuration Change Warning (Phase 3 Addition)
 ```bash
-# 前提：既存のMachineがCPU=2, Memory=2048で稼働中
+# Prerequisite: Existing Machine running with CPU=2, Memory=2048
 
-# リソース設定を変更（AUTO_INIT=falseのため警告を表示）
+# Change resource configuration (displays warning with AUTO_INIT=false)
 devpod provider set-options podman \
   -o PODMAN_MACHINE_CPUS=8 \
   -o PODMAN_MACHINE_MEMORY=4096
 
-# ワークスペース起動時に警告が表示される
+# Warning displayed on workspace startup
 devpod up <test-repo> --provider podman
 
-# 期待される警告メッセージ：
+# Expected warning message:
 # ⚠️  WARNING: Machine resource configuration mismatch detected
 # Configuration differences:
 #   • CPUs: Current=2, Desired=8
 #   • Memory: Current=2048MB, Desired=4096MB
 ```
 
-### TS8: 新規Machine作成時の警告非表示（Phase 3追加）
+### TS8: No Warning on New Machine Creation (Phase 3 Addition)
 ```bash
-# Machineを削除
+# Delete Machine
 podman machine stop
 podman machine rm
 
-# AUTO_INIT有効化
+# Enable AUTO_INIT
 devpod provider set-options podman \
   -o PODMAN_MACHINE_AUTO_INIT=true \
   -o PODMAN_MACHINE_CPUS=8 \
   -o PODMAN_MACHINE_MEMORY=4096
 
-# ワークスペース起動時に新規Machine作成
+# Create new Machine on workspace startup
 devpod up <test-repo> --provider podman
 
-# 期待される動作：
-# - 新規Machine作成（警告なし）
-# - 作成時に指定リソース（CPU=8, Memory=4096）が適用される
+# Expected behavior:
+# - New Machine created (no warning)
+# - Specified resources (CPU=8, Memory=4096) applied at creation
 ```
 
-## レポート
+## Reporting
 
-テスト結果は標準出力に表示されます。エラーが発生した場合は、詳細なエラーメッセージとガイダンスが表示されます。
+Test results are displayed in standard output. If errors occur, detailed error messages and guidance will be shown.

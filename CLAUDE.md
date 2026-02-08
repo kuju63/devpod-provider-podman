@@ -16,13 +16,15 @@ podman-provider/
 │   ├── test_init_script.sh          # Unit tests for init script
 │   ├── integration_test.sh          # DevPod integration tests
 │   ├── test_mismatch_detection.sh   # Resource mismatch detection tests
-│   └── README.md                    # Test execution guide
+│   ├── README.md                    # Test execution guide (English)
+│   └── README.ja.md                 # Test execution guide (Japanese)
 ├── .github/workflows/
 │   ├── claude.yml                   # Claude Code integration (@claude mentions)
 │   └── claude-code-review.yml       # Automatic code review
 ├── .claude/
 │   └── settings.local.json          # Claude Code permission settings
-├── README.md              # User documentation (343 lines)
+├── README.md              # User documentation (English, primary)
+├── README.ja.md           # User documentation (Japanese)
 ├── CLAUDE.md              # Developer guide (this file)
 └── CHANGELOG.md           # Version history
 ```
@@ -31,7 +33,60 @@ podman-provider/
 
 - **Single-file implementation**: All functionality is embedded in `provider.yaml`'s `exec.init` script (lines 77-463)
 - **Test-driven**: Test scripts exist for each feature
+- **Multi-language documentation**: README files available in English (primary) and Japanese
 - **Empty directory**: `podman/` is currently unused (reserved for future extensions)
+
+## Multi-Language Documentation
+
+### File Structure
+
+- `README.md`: Primary documentation in English (for global audience)
+- `README.ja.md`: Japanese version (for Japanese-speaking users)
+- `tests/README.md`: Test documentation in English
+- `tests/README.ja.md`: Test documentation in Japanese
+
+### Maintaining Translations
+
+When updating documentation:
+
+1. **Always update both language versions** when making changes
+2. **Keep structure identical** between language versions for easier synchronization
+3. **Code examples must be identical** (no translation needed)
+4. **Update language selection links** if adding new languages
+5. **In commits and PRs, use English** for commit messages and descriptions
+
+### Translation Guidelines
+
+**Technical Terminology**:
+- Keep technical terms consistent (Machine, workspace, provider, etc.)
+- Use the glossary defined in this document
+- Cross-reference with Podman/DevPod official documentation
+
+**Quality Checklist**:
+- [ ] All technical terms consistent with glossary
+- [ ] Code blocks identical in both versions
+- [ ] Links functional in both versions
+- [ ] Language selection links point to correct files
+- [ ] Both versions committed in same commit
+- [ ] Section structure matches between versions
+
+### Translation Glossary
+
+| Japanese | English |
+|----------|---------|
+| Machine | Machine (keep as proper noun) |
+| ワークスペース | workspace |
+| プロバイダー | provider |
+| 自動起動 | automatic startup |
+| 非破壊的 | non-destructive |
+| rootfulモード | rootful mode |
+| リソース設定 | resource configuration |
+| 前提条件 | Prerequisites |
+| 使い方 | Usage |
+| トラブルシューティング | Troubleshooting |
+| 開発環境 | development environment |
+| 統合テスト | integration test |
+| 手動テスト | manual test |
 
 ## Development Workflow
 
