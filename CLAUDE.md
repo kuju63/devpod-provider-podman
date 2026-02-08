@@ -2,108 +2,286 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## プロジェクト概要
+## Project Overview
 
-DevPod向けのPodmanプロバイダー実装。DevPodはオープンソースのクライアントサイド開発環境管理ツールで、このプロバイダーはPodmanコンテナエンジンを利用してワークスペースを管理する。
+Podman provider implementation for DevPod. DevPod is an open-source client-side development environment management tool, and this provider manages workspaces using the Podman container engine.
 
-## 開発ステータス
+## Project Structure
 
-- ✅ **Phase 1完成** (v0.0.1): 基本的なプロバイダー機能
-- ✅ **Phase 2完成** (v0.1.0): macOS Podman Machine自動管理とリソース設定
-- ✅ **Phase 3完成**: リソース設定ミスマッチ警告
-- ✅ **Phase 4完成** (v0.2.0): in-placeリソース更新（`podman machine set`対応）
-- ✅ **v0.2.1リリース**: Machine名検出バグ修正（アスタリスク除去対応）
+```
+podman-provider/
+├── provider.yaml           # DevPod provider definition (466 lines, single implementation file)
+│                           # All logic is embedded in exec.init section
+├── tests/                  # Test suite
+│   ├── test_init_script.sh          # Unit tests for init script
+│   ├── integration_test.sh          # DevPod integration tests
+│   ├── test_mismatch_detection.sh   # Resource mismatch detection tests
+│   └── README.md                    # Test execution guide
+├── .github/workflows/
+│   ├── claude.yml                   # Claude Code integration (@claude mentions)
+│   └── claude-code-review.yml       # Automatic code review
+├── .claude/
+│   └── settings.local.json          # Claude Code permission settings
+├── README.md              # User documentation (343 lines)
+├── CLAUDE.md              # Developer guide (this file)
+└── CHANGELOG.md           # Version history
+```
 
-## 開発フロー
+**Key Design Decisions**:
+- **Single-file implementation**: All functionality is embedded in `provider.yaml`'s `exec.init` script (lines 77-463)
+- **Test-driven**: Test scripts exist for each feature
+- **Empty directory**: `podman/` is currently unused (reserved for future extensions)
 
-新しいプラットフォームやフィーチャーを追加する際は、必ずGitHub issueを作成してissue駆動開発を行う。
+## Development Workflow
 
-## リント
+This project follows Issue Driven Development (IDD).
 
-YAMLファイルのリントのみを使用：
+### Development Process
+
+```mermaid
+graph TD
+    A[New feature/bug fix idea] --> B[Create GitHub Issue]
+    B --> C[Get issue number]
+    C --> D[Create branch: feature/issue-XX or fix/issue-XX]
+    D --> E[Edit provider.yaml]
+    E --> F[Create/update test scripts]
+    F --> G[Run local tests]
+    G --> H{Tests pass?}
+    H -->|No| E
+    H -->|Yes| I[Refactor]
+    I --> J[Re-run tests]
+    J --> K{Tests pass?}
+    K -->|No| I
+    K -->|Yes| L[Commit: Conventional Commits format]
+    L --> M[Create Pull Request]
+    M --> N[@claude mention or auto-review]
+    N --> O{Review approved?}
+    O -->|Needs fixes| E
+    O -->|Approved| P[Merge to main]
+    P --> Q[Close Issue]
+```
+
+### Key Principles
+
+1. **Create issue for all changes**: Features, bug fixes, documentation updates - everything
+
+2. **Branch naming convention**: `feature/issue-XX-short-description` or `fix/issue-XX-short-description`
+
+3. **Tests required**: Add or update tests corresponding to changes
+
+4. **Refactoring phase**: After tests pass, refactor code and re-run tests before committing
+
+5. **Conventional Commits compliance**: All commit messages follow Conventional Commits format in English
+
+### Commit Message Format
+
+**Basic structure**:
+```
+<type>(scope): <subject>
+
+<body>
+
+Refs: #<issue-number>
+```
+
+**Types**:
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only changes
+- `refactor`: Refactoring (no functionality change)
+- `test`: Adding or fixing tests
+- `chore`: Build process or tooling changes
+
+**scope**: `provider`, `tests`, `workflows`, `docs`, etc.
+
+**subject**: Concise description of change (max 50 chars, imperative mood, lowercase start, no period)
+
+**body**:
+- Why this change was made (Why)
+- What side effects exist (Side effects)
+- One blank line before body
+- Wrap at 72 characters
+
+**Example**:
+```
+feat(provider): add automatic resource update with podman machine set
+
+This change implements non-destructive resource updates using the
+`podman machine set` command instead of recreating the machine.
+
+Why: Users reported data loss during machine recreation when updating
+CPU or memory settings.
+
+Side effects: Requires Podman v4.0 or later. Disk size can only be
+increased, not decreased.
+
+Refs: #42
+```
+
+6. **Link issue in PR**: Include `Closes #XX` or `Fixes #XX` in PR body
+
+## Running Tests
+
+### Unit Tests
 ```bash
-# YAML lintコマンド（プロジェクト固有のコマンドはまだ未定義）
+# Test init script (platform detection, machine management)
+cd tests
+./test_init_script.sh
+
+# Test resource mismatch detection logic
+./test_mismatch_detection.sh
+```
+
+### Integration Tests
+```bash
+# Integration test as DevPod provider
+# Prerequisites: devpod and podman installed
+cd tests
+./integration_test.sh
+```
+
+### E2E Tests (Manual)
+```bash
+# Register local provider
+devpod provider add ./provider.yaml
+devpod provider use podman
+
+# Create sample workspace
+devpod up https://github.com/loft-sh/devpod-example-go --provider podman
+```
+
+See `tests/README.md` for detailed test scenarios.
+
+## Linting
+
+Only YAML file linting is used:
+```bash
+# YAML lint command (project-specific command not yet defined)
 yamllint .
 ```
 
-## DevPodプロバイダーの構造
+## GitHub Actions Integration
 
-DevPodプロバイダーは`provider.yaml`ファイルで定義される。主な構成要素：
+### Claude Code Workflow
 
-### provider.yamlの主要セクション
+**Triggers**:
+- `@claude` mention in issues or comments
+- `@claude` mention in pull request reviews
+- `@claude` in issue title/body when creating issues
 
-1. **メタデータ**: name, version, description, icon（オプション）
-2. **options**: ユーザーが設定可能なプロバイダーオプション（環境変数として渡される）
-3. **agent**: プロバイダー設定（driver, inactivityTimeout, credentials injectionなど）
-4. **binaries**: プロバイダー実行に必要な追加ヘルパーバイナリ
-5. **exec**: DevPodが環境とやり取りするために実行するコマンド
-   - `command`: 必須 - 環境内でコマンドを実行する方法を定義
-   - `init`, `create`, `delete`: オプションコマンド
+**Permissions**:
+- `.claude/settings.local.json` defines allowed scopes for local development
+- Current permissions: `devpod provider`, `podman machine`, test script execution
 
-### Podman固有の考慮事項
+**File**: `.github/workflows/claude.yml`
 
-- **プラットフォーム差異**: macOSではPodman MachineのVM管理が必要、LinuxではコンテナDaemonへの直接接続
-- **driver設定**: agent.driverは`docker`互換モードを使用（docker CLI互換）
-- **Machine管理**: macOS環境では`exec.init`スクリプトで自動Machine管理を実装
+### Automatic Code Review
 
-### Phase 2で追加された機能
+**Trigger**: Pull request creation/update (opened, synchronize, ready_for_review, reopened)
 
-1. **オプション管理**:
-   - `optionGroups`で3つのカテゴリに分類（Basic、Machine Management、Machine Resources）
-   - 合計10個のオプション（Phase 1の2個 + Phase 2の8個）
+**Behavior**: Claude Code's code-review plugin automatically reviews code
 
-2. **initスクリプトの拡張**:
-   - プラットフォーム検出（`$OSTYPE`）
-   - Machine名の自動検出または指定
-   - Machine存在確認と自動作成
-   - Machine状態確認と自動起動
-   - タイムアウト付き起動待機ループ
-   - 詳細なエラーメッセージとガイダンス
+**File**: `.github/workflows/claude-code-review.yml`
 
-3. **リソース設定**:
-   - CPU、メモリ、ディスクサイズの設定
-   - rootful/rootlessモードの選択
-   - 設定はMachine作成時のみ適用
+## Troubleshooting
 
-4. **エラーハンドリング**:
-   - 各エラー状態で手動解決方法と自動化オプションを提示
-   - タイムアウト設定の調整ガイダンス
+### provider.yaml Syntax Errors
+**Symptom**: DevPod cannot load provider
 
-### Phase 3で追加された機能
+**Diagnosis**:
+```bash
+# Check with YAML lint
+yamllint provider.yaml
 
-1. **リソース設定ミスマッチ検出**:
-   - Machine起動時に現在の設定と要求された設定を比較
-   - CPU、メモリ、ディスクサイズ、rootfulモードの不一致を検出
-   - 詳細な警告メッセージを表示
+# Check error message when adding provider
+devpod provider add ./provider.yaml
+```
 
-2. **ミスマッチ時の対応ガイダンス**:
-   - 手動でのMachine再作成手順
-   - DevPodを使った自動再作成手順
-   - 設定値の確認とデバッグ情報
+### init Script Failures
+**Symptom**: Error during `devpod up` execution
 
-### Phase 4で追加された機能
+**Diagnosis**:
+```bash
+# Run script directly for testing
+cd tests
+./test_init_script.sh
 
-1. **新オプション**:
-   - `PODMAN_MACHINE_AUTO_RESOURCE_UPDATE` (デフォルト: `false`)
-   - 有効化するとリソース設定を自動的にin-place更新
+# Test with environment variables set
+export PODMAN_MACHINE_AUTO_INIT=true
+./test_init_script.sh
+```
 
-2. **非破壊的リソース更新**:
-   - `podman machine set`コマンドを使用してMachine再作成を回避
-   - Machine停止 → リソース更新 → Machine起動のフロー
-   - データ損失なしでCPU、メモリ、ディスク、rootfulモードを更新可能
+### Machine Name Detection Issues
+**Symptom**: "VM does not exist" error
 
-3. **改善された警告メッセージ**:
-   - OPTION 1: `podman machine set`を使った非破壊的更新手順（推奨）
-   - OPTION 2: 従来の破壊的な再作成手順
-   - 実行可能なコマンド例を自動生成
+**Cause**: Pre-v0.2.1 version without asterisk removal support
 
-4. **エラーハンドリングの強化**:
-   - ディスクサイズ減少の試みを検出して警告（増加のみサポート）
-   - 部分的な更新失敗に対する適切な処理
-   - 更新前後の設定値を詳細にログ出力
-   - Machine起動失敗時の明確なエラーメッセージ
+**Solution**:
+```bash
+# Explicitly specify machine name
+devpod provider set-options podman PODMAN_MACHINE_NAME=<machine-name>
+```
 
-## 参考リソース
+### Resource Update Failures
+**Symptom**: `podman machine set` command error
+
+**Diagnosis**:
+```bash
+# Check Podman version (machine set requires v4.0+)
+podman --version
+
+# Verify machine is stopped
+podman machine stop <machine-name>
+```
+
+## DevPod Provider Structure
+
+DevPod providers are defined in `provider.yaml` file. Main components:
+
+### provider.yaml Key Sections
+
+1. **Metadata**: name, version, description, icon (optional)
+2. **options**: User-configurable provider options (passed as environment variables)
+3. **agent**: Provider settings (driver, inactivityTimeout, credentials injection, etc.)
+4. **binaries**: Additional helper binaries required for provider execution
+5. **exec**: Commands DevPod executes to interact with environment
+   - `command`: Required - defines how to execute commands in environment
+   - `init`, `create`, `delete`: Optional commands
+
+### Podman-Specific Considerations
+
+- **Platform differences**: macOS requires Podman Machine VM management, Linux connects directly to container daemon
+- **driver setting**: agent.driver uses `docker` compatibility mode (docker CLI compatible)
+- **Machine management**: macOS environments implement automatic machine management in `exec.init` script
+
+### Modifying provider.yaml - Important Notes
+
+#### 1. Bash Script Embedding Constraints
+- Bash scripts (`exec.init`) in YAML are embedded as string literals
+- Pay attention to indentation and escaping (especially heredocs)
+- Syntax errors not detected until DevPod execution, so testing is essential
+
+#### 2. Environment Variable References
+- Reference values defined in `options` with `${VARIABLE_NAME}` format
+- DevPod expands these as environment variables at runtime
+- Undefined variables become empty strings (recommend setting default values)
+
+#### 3. Platform Branching
+- `[[ "$OSTYPE" == "darwin"* ]]` branches for macOS/Linux
+- Only macOS requires Podman Machine management
+- Linux connects directly to Podman daemon
+
+#### 4. Error Message Design
+- Include manual resolution steps and automation options for all errors
+- Output errors to stderr (`>&2 echo`)
+- Make failures explicit with `exit 1`
+
+#### 5. Test Updates
+- Update `tests/test_init_script.sh` when changing `exec.init`
+- Update `tests/integration_test.sh` when adding new options
+- Update `tests/test_mismatch_detection.sh` when changing resource detection logic
+
+## Reference Resources
 
 - [DevPod Provider Quickstart](https://devpod.sh/docs/developing-providers/quickstart)
 - [Provider Configuration](https://devpod.sh/docs/developing-providers/agent)
