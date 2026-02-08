@@ -8,7 +8,7 @@ Podman provider implementation for DevPod. DevPod is an open-source client-side 
 
 ## Project Structure
 
-```
+```text
 podman-provider/
 ├── provider.yaml           # DevPod provider definition (466 lines, single implementation file)
 │                           # All logic is embedded in exec.init section
@@ -28,6 +28,7 @@ podman-provider/
 ```
 
 **Key Design Decisions**:
+
 - **Single-file implementation**: All functionality is embedded in `provider.yaml`'s `exec.init` script (lines 77-463)
 - **Test-driven**: Test scripts exist for each feature
 - **Empty directory**: `podman/` is currently unused (reserved for future extensions)
@@ -76,7 +77,8 @@ graph TD
 ### Commit Message Format
 
 **Basic structure**:
-```
+
+```text
 <type>(scope): <subject>
 
 <body>
@@ -85,6 +87,7 @@ Refs: #<issue-number>
 ```
 
 **Types**:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation only changes
@@ -97,13 +100,15 @@ Refs: #<issue-number>
 **subject**: Concise description of change (max 50 chars, imperative mood, lowercase start, no period)
 
 **body**:
+
 - Why this change was made (Why)
 - What side effects exist (Side effects)
 - One blank line before body
 - Wrap at 72 characters
 
 **Example**:
-```
+
+```text
 feat(provider): add automatic resource update with podman machine set
 
 This change implements non-destructive resource updates using the
@@ -118,11 +123,12 @@ increased, not decreased.
 Refs: #42
 ```
 
-6. **Link issue in PR**: Include `Closes #XX` or `Fixes #XX` in PR body
+1. **Link issue in PR**: Include `Closes #XX` or `Fixes #XX` in PR body
 
 ## Running Tests
 
 ### Unit Tests
+
 ```bash
 # Test init script (platform detection, machine management)
 cd tests
@@ -133,6 +139,7 @@ cd tests
 ```
 
 ### Integration Tests
+
 ```bash
 # Integration test as DevPod provider
 # Prerequisites: devpod and podman installed
@@ -141,6 +148,7 @@ cd tests
 ```
 
 ### E2E Tests (Manual)
+
 ```bash
 # Register local provider
 devpod provider add ./provider.yaml
@@ -155,6 +163,7 @@ See `tests/README.md` for detailed test scenarios.
 ## Linting
 
 Only YAML file linting is used:
+
 ```bash
 # YAML lint command (project-specific command not yet defined)
 yamllint .
@@ -165,11 +174,13 @@ yamllint .
 ### Claude Code Workflow
 
 **Triggers**:
+
 - `@claude` mention in issues or comments
 - `@claude` mention in pull request reviews
 - `@claude` in issue title/body when creating issues
 
 **Permissions**:
+
 - `.claude/settings.local.json` defines allowed scopes for local development
 - Current permissions: `devpod provider`, `podman machine`, test script execution
 
@@ -186,9 +197,11 @@ yamllint .
 ## Troubleshooting
 
 ### provider.yaml Syntax Errors
+
 **Symptom**: DevPod cannot load provider
 
 **Diagnosis**:
+
 ```bash
 # Check with YAML lint
 yamllint provider.yaml
@@ -198,9 +211,11 @@ devpod provider add ./provider.yaml
 ```
 
 ### init Script Failures
+
 **Symptom**: Error during `devpod up` execution
 
 **Diagnosis**:
+
 ```bash
 # Run script directly for testing
 cd tests
@@ -212,20 +227,24 @@ export PODMAN_MACHINE_AUTO_INIT=true
 ```
 
 ### Machine Name Detection Issues
+
 **Symptom**: "VM does not exist" error
 
 **Cause**: Pre-v0.2.1 version without asterisk removal support
 
 **Solution**:
+
 ```bash
 # Explicitly specify machine name
 devpod provider set-options podman PODMAN_MACHINE_NAME=<machine-name>
 ```
 
 ### Resource Update Failures
+
 **Symptom**: `podman machine set` command error
 
 **Diagnosis**:
+
 ```bash
 # Check Podman version (machine set requires v4.0+)
 podman --version
@@ -257,26 +276,31 @@ DevPod providers are defined in `provider.yaml` file. Main components:
 ### Modifying provider.yaml - Important Notes
 
 #### 1. Bash Script Embedding Constraints
+
 - Bash scripts (`exec.init`) in YAML are embedded as string literals
 - Pay attention to indentation and escaping (especially heredocs)
 - Syntax errors not detected until DevPod execution, so testing is essential
 
 #### 2. Environment Variable References
+
 - Reference values defined in `options` with `${VARIABLE_NAME}` format
 - DevPod expands these as environment variables at runtime
 - Undefined variables become empty strings (recommend setting default values)
 
 #### 3. Platform Branching
+
 - `[[ "$OSTYPE" == "darwin"* ]]` branches for macOS/Linux
 - Only macOS requires Podman Machine management
 - Linux connects directly to Podman daemon
 
 #### 4. Error Message Design
+
 - Include manual resolution steps and automation options for all errors
 - Output errors to stderr (`>&2 echo`)
 - Make failures explicit with `exit 1`
 
 #### 5. Test Updates
+
 - Update `tests/test_init_script.sh` when changing `exec.init`
 - Update `tests/integration_test.sh` when adding new options
 - Update `tests/test_mismatch_detection.sh` when changing resource detection logic
