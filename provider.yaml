@@ -1,5 +1,5 @@
 name: podman
-version: v0.2.0
+version: v0.2.1
 home: https://github.com/kuju63/devpod-provider-podman
 description: |-
   DevPod on Podman
