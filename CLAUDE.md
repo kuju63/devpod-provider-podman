@@ -22,7 +22,19 @@ podman-provider/
 │   ├── claude.yml                   # Claude Code integration (@claude mentions)
 │   └── claude-code-review.yml       # Automatic code review
 ├── .claude/
-│   └── settings.local.json          # Claude Code permission settings
+│   ├── settings.local.json          # Claude Code permission settings
+│   └── skills/
+│       ├── translate/               # Translation automation skill
+│       │   ├── SKILL.md
+│       │   ├── glossary.md          # 56 software development terms
+│       │   └── examples.md
+│       └── release/                 # Release automation skill
+│           ├── SKILL.md
+│           ├── references/
+│           │   ├── changelog-template.md
+│           │   └── release-notes-template.md
+│           └── scripts/
+│               └── semver.sh        # Semantic versioning calculator
 ├── README.md              # User documentation (English, primary)
 ├── README.ja.md           # User documentation (Japanese)
 ├── CLAUDE.md              # Developer guide (this file)
@@ -116,6 +128,79 @@ This project includes a custom Claude Code skill for automated translation:
 - Skill definition: `.claude/skills/translate/SKILL.md`
 - Translation examples: `.claude/skills/translate/examples.md`
 - Translation glossary: `.claude/skills/translate/glossary.md` (56 software development terms)
+
+### Using the Release Automation Skill
+
+This project includes a custom Claude Code skill for automated release process:
+
+**Command**:
+
+```bash
+/release [version] [--dry-run]
+```
+
+**Arguments**:
+- `[version]`: Optional. Version number (e.g., `v0.4.0`). If omitted, automatically detects version from Conventional Commits
+- `[--dry-run]`: Optional. Preview mode without executing commits, tags, or pushes
+
+**Examples**:
+
+```bash
+# Auto-detect version from commits (recommended)
+/release
+
+# Specify version manually
+/release v0.4.0
+
+# Preview release without executing
+/release --dry-run
+
+# Preview specific version
+/release v0.4.0 --dry-run
+```
+
+**What the skill does**:
+
+1. **Phase 0: Validation** - Validates arguments, checks prerequisites (git clean, main branch, gh CLI auth)
+2. **Phase 1: Pre-release Verification** - Runs test suite, validates provider.yaml, checks documentation
+3. **Phase 2: CHANGELOG Generation** - Parses git log, categorizes commits, generates CHANGELOG entry
+4. **Phase 3: Version Bump** - Updates provider.yaml version, creates commit
+5. **Phase 4: Git Tag** - Creates annotated tag
+6. **Phase 5: Push** - Pushes commit and tag to remote
+7. **Phase 6: GitHub Release** - Creates GitHub Release with notes
+8. **Phase 7: Verification** - Verifies release and displays URL
+
+**Version Auto-Detection**:
+
+The skill automatically determines version bump type based on Conventional Commits:
+- **MAJOR** (e.g., v0.3.0 → v1.0.0): Contains `BREAKING CHANGE:` or `feat!`/`fix!`
+- **MINOR** (e.g., v0.3.0 → v0.4.0): Contains `feat:` commits
+- **PATCH** (e.g., v0.3.0 → v0.3.1): Contains `fix:` or other commits only
+
+**Files**:
+
+- Skill definition: `.claude/skills/release/SKILL.md`
+- CHANGELOG template: `.claude/skills/release/references/changelog-template.md`
+- Release notes template: `.claude/skills/release/references/release-notes-template.md`
+- Semver calculator: `.claude/skills/release/scripts/semver.sh`
+
+**Rollback Instructions**:
+
+If release fails, manual rollback may be needed:
+
+```bash
+# Delete local tag
+git tag -d vX.Y.Z
+
+# Reset version bump commit
+git reset --hard HEAD~1
+
+# Delete remote tag (if already pushed)
+git push origin --delete vX.Y.Z
+
+# Restore files
+git checkout HEAD -- CHANGELOG.md provider.yaml
+```
 
 ## Development Workflow
 
