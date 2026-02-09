@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.0] - 2026-02-09
+
+### Added
+- Provider icon in DevPod Desktop UI for better visual identification (#8)
+- Translation skill for automated document translation (Claude Code integration)
+- Contributor Covenant Code of Conduct v2.1
+- Multi-language documentation support (English and Japanese)
+  - README.md (English, primary)
+  - README.ja.md (Japanese)
+  - tests/README.md (English)
+  - tests/README.ja.md (Japanese)
+
+### Changed
+- CLAUDE.md now in English with expanded developer guidance
+- Added test flow diagrams (Mermaid) for development workflow visualization
+- Translation glossary moved to separate file (.claude/skills/translate/glossary.md)
+- Improved Conventional Commits documentation with examples
+
 ## [v0.2.1] - 2026-02-08
 
 ### Fixed
