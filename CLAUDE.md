@@ -74,13 +74,48 @@ When updating documentation:
 
 For consistency in translations between English and Japanese documentation, refer to the translation glossary:
 
-- **File**: `.claude/translation-glossary.md`
+- **File**: `.claude/skills/translate/glossary.md`
 - **Usage**: Read this file when working on documentation translations or when verifying terminology consistency
 
 **When to use**:
 - Before translating or updating multi-language documentation
 - When verifying technical term consistency across README.md and README.ja.md
 - When adding new technical terms to the project
+
+### Using the Translation Skill
+
+This project includes a custom Claude Code skill for automated translation:
+
+**Command**:
+
+```bash
+/translate <filename> <source-lang-code> <target-lang-code>
+```
+
+**Language codes**: `en` (English), `ja` (Japanese)
+
+**Examples**:
+
+```bash
+# Translate README from English to Japanese
+/translate README.md en ja
+
+# Translate test guide from Japanese to English
+/translate tests/README.ja.md ja en
+```
+
+**What the skill does**:
+
+- Automatically applies the translation glossary (`.claude/skills/translate/glossary.md`)
+- Preserves code blocks and links
+- Maintains section structure between language versions
+- Runs quality checks before completion
+
+**Files**:
+
+- Skill definition: `.claude/skills/translate/SKILL.md`
+- Translation examples: `.claude/skills/translate/examples.md`
+- Translation glossary: `.claude/skills/translate/glossary.md` (56 software development terms)
 
 ## Development Workflow
 
