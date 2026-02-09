@@ -72,21 +72,15 @@ When updating documentation:
 
 ### Translation Glossary
 
-| Japanese | English |
-|----------|---------|
-| Machine | Machine (keep as proper noun) |
-| ワークスペース | workspace |
-| プロバイダー | provider |
-| 自動起動 | automatic startup |
-| 非破壊的 | non-destructive |
-| rootfulモード | rootful mode |
-| リソース設定 | resource configuration |
-| 前提条件 | Prerequisites |
-| 使い方 | Usage |
-| トラブルシューティング | Troubleshooting |
-| 開発環境 | development environment |
-| 統合テスト | integration test |
-| 手動テスト | manual test |
+For consistency in translations between English and Japanese documentation, refer to the translation glossary:
+
+- **File**: `.claude/translation-glossary.md`
+- **Usage**: Read this file when working on documentation translations or when verifying terminology consistency
+
+**When to use**:
+- Before translating or updating multi-language documentation
+- When verifying technical term consistency across README.md and README.ja.md
+- When adding new technical terms to the project
 
 ## Development Workflow
 
@@ -109,8 +103,8 @@ graph TD
     J --> K{Tests pass?}
     K -->|No| I
     K -->|Yes| L[Commit: Conventional Commits format]
-    L --> M[Create Pull Request]
-    M --> N[@claude mention or auto-review]
+    L --> M[Create Pull Request. Needs issue link in PR body]
+    M --> N["@claude mention or auto-review"]
     N --> O{Review approved?}
     O -->|Needs fixes| E
     O -->|Approved| P[Merge to main]
@@ -134,7 +128,7 @@ graph TD
 **Basic structure**:
 
 ```text
-<type>(scope): <subject>
+<type>: <subject>
 
 <body>
 
@@ -150,8 +144,6 @@ Refs: #<issue-number>
 - `test`: Adding or fixing tests
 - `chore`: Build process or tooling changes
 
-**scope**: `provider`, `tests`, `workflows`, `docs`, etc.
-
 **subject**: Concise description of change (max 50 chars, imperative mood, lowercase start, no period)
 
 **body**:
@@ -164,7 +156,7 @@ Refs: #<issue-number>
 **Example**:
 
 ```text
-feat(provider): add automatic resource update with podman machine set
+feat: add automatic resource update with podman machine set
 
 This change implements non-destructive resource updates using the
 `podman machine set` command instead of recreating the machine.
@@ -181,6 +173,20 @@ Refs: #42
 1. **Link issue in PR**: Include `Closes #XX` or `Fixes #XX` in PR body
 
 ## Running Tests
+
+```mermaid
+graph TD
+    A[Make code changes] --> B[Run Unit Tests]
+    B --> C{Unit Tests pass?}
+    C -->|No| A
+    C -->|Yes| D[Run Integration Tests]
+    D --> E{Integration Tests pass?}
+    E -->|No| A
+    E -->|Yes| F[E2E Tests]
+    F --> G{E2E Tests pass?}
+    G -->|No| A
+    G -->|Yes| H[Test Passed]
+```
 
 ### Unit Tests
 
@@ -202,9 +208,14 @@ cd tests
 ./integration_test.sh
 ```
 
-### E2E Tests (Manual)
+### E2E Tests
 
 ```bash
+set -e
+# Clean up existing podman provider
+if [ -n "$(devpod provider list | grep podman)" ]; then 
+    devpod provider delete podman;
+fi
 # Register local provider
 devpod provider add ./provider.yaml
 devpod provider use podman
