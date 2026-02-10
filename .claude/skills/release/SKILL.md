@@ -480,6 +480,34 @@ fi
 
 ### Phase 6: GitHub Release Creation
 
+**6.0 Validate release assets**
+
+Check that provider.yaml exists and is valid:
+
+```bash
+if [ "$dry_run" = false ]; then
+  echo "Validating release assets..."
+
+  if [ ! -f "provider.yaml" ]; then
+    echo "Error: provider.yaml not found in current directory"
+    echo "Cannot create release without provider asset"
+    exit 1
+  fi
+
+  # Verify provider.yaml is valid YAML (if yamllint available)
+  if command -v yamllint >/dev/null 2>&1; then
+    if ! yamllint provider.yaml >/dev/null 2>&1; then
+      echo "Error: provider.yaml has syntax errors"
+      echo "Run: yamllint provider.yaml"
+      exit 1
+    fi
+  fi
+
+  echo "✅ Release asset validated: provider.yaml"
+  echo ""
+fi
+```
+
 **6.1 Generate release notes**
 
 Reference the template at [references/release-notes-template.md](references/release-notes-template.md).
@@ -507,12 +535,15 @@ devpod provider use podman
 ---
 🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 
-  # Create release
+  # Create release with provider.yaml as asset
+  # Note: Files are specified after the tag name as positional arguments
+  echo "Uploading asset: provider.yaml"
   gh release create "$new_version" \
+    provider.yaml \
     --title "Release ${new_version}" \
     --notes "$release_notes"
 
-  echo "✅ GitHub Release created"
+  echo "✅ GitHub Release created with asset: provider.yaml"
   echo ""
 fi
 ```
@@ -525,6 +556,15 @@ if [ "$dry_run" = true ]; then
   echo "Release Notes Preview (DRY-RUN)"
   echo "=========================================="
   echo "$release_notes"
+  echo "=========================================="
+  echo ""
+  echo "Asset to attach: provider.yaml"
+  if [ -f "provider.yaml" ]; then
+    echo "  ✅ File exists: $(ls -lh provider.yaml | awk '{print $5}')"
+  else
+    echo "  ❌ File missing: provider.yaml"
+    echo "  Error: Release creation would fail"
+  fi
   echo "=========================================="
   echo ""
 fi
@@ -591,6 +631,16 @@ fi
 6. **gh CLI not authenticated**:
    - Message: "Error: gh CLI is not authenticated"
    - Resolution: Run `gh auth login`
+
+7. **provider.yaml not found**:
+   - Message: "Error: provider.yaml not found in current directory"
+   - Resolution: Verify you're in repository root directory
+   - Command: `ls provider.yaml` to verify file exists
+
+8. **provider.yaml syntax errors**:
+   - Message: "Error: provider.yaml has syntax errors"
+   - Resolution: Fix YAML syntax issues
+   - Command: `yamllint provider.yaml` for detailed errors
 
 ## Rollback Instructions
 
