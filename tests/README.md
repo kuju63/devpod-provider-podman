@@ -236,6 +236,53 @@ devpod up <test-repo> --provider podman
 # - Specified resources (CPU=8, Memory=4096) applied at creation
 ```
 
+### TS9: Release Asset Verification
+
+Verify that GitHub releases include provider.yaml asset for DevPod installation.
+
+**Prerequisites**:
+```bash
+# Requires a published release (e.g., v0.3.0)
+# Verify release exists
+gh release list
+```
+
+**Test Steps**:
+```bash
+# Step 1: Verify asset is attached to release
+gh release view v0.3.0 | grep "provider.yaml"
+# Expected: Shows "provider.yaml" in assets list
+
+# Step 2: Download provider.yaml from latest release
+curl -L https://github.com/kuju63/devpod-provider-podman/releases/latest/download/provider.yaml -o /tmp/provider-test.yaml
+# Expected: File downloaded successfully (HTTP 200)
+
+# Step 3: Verify file is valid YAML
+yamllint /tmp/provider-test.yaml
+# Expected: No syntax errors
+
+# Step 4: Test DevPod installation from GitHub release
+devpod provider add github.com/kuju63/devpod-provider-podman
+devpod provider use podman
+devpod provider list | grep podman
+# Expected: Provider installed and listed
+
+# Step 5: Verify provider version matches release
+devpod provider list | grep "podman.*v0.3.0"
+# Expected: Version matches release tag
+
+# Cleanup
+devpod provider delete podman
+rm /tmp/provider-test.yaml
+```
+
+**Expected Results**:
+- Asset appears in `gh release view` output
+- provider.yaml downloads successfully from `/latest/download/` path
+- YAML syntax is valid
+- DevPod can install provider directly from GitHub URL
+- Provider version matches release tag
+
 ## Reporting
 
 Test results are displayed in standard output. If errors occur, detailed error messages and guidance will be shown.

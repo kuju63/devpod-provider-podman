@@ -236,6 +236,53 @@ devpod up <test-repo> --provider podman
 # - 作成時に指定リソース（CPU=8, Memory=4096）が適用される
 ```
 
+### TS9: リリースアセット検証
+
+GitHubリリースにDevPodインストール用のprovider.yamlアセットが含まれていることを検証します。
+
+**前提条件**:
+```bash
+# 公開済みリリース（例: v0.3.0）が必要
+# リリースの存在を確認
+gh release list
+```
+
+**テスト手順**:
+```bash
+# ステップ1: リリースにアセットが添付されていることを確認
+gh release view v0.3.0 | grep "provider.yaml"
+# 期待結果: アセットリストに "provider.yaml" が表示される
+
+# ステップ2: 最新リリースからprovider.yamlをダウンロード
+curl -L https://github.com/kuju63/devpod-provider-podman/releases/latest/download/provider.yaml -o /tmp/provider-test.yaml
+# 期待結果: ファイルが正常にダウンロードされる（HTTP 200）
+
+# ステップ3: ファイルが有効なYAMLであることを確認
+yamllint /tmp/provider-test.yaml
+# 期待結果: シンタックスエラーなし
+
+# ステップ4: GitHubリリースからDevPodインストールをテスト
+devpod provider add github.com/kuju63/devpod-provider-podman
+devpod provider use podman
+devpod provider list | grep podman
+# 期待結果: プロバイダがインストールされ、リストに表示される
+
+# ステップ5: プロバイダのバージョンがリリースと一致することを確認
+devpod provider list | grep "podman.*v0.3.0"
+# 期待結果: バージョンがリリースタグと一致する
+
+# クリーンアップ
+devpod provider delete podman
+rm /tmp/provider-test.yaml
+```
+
+**期待される結果**:
+- `gh release view`の出力にアセットが表示される
+- provider.yamlが`/latest/download/`パスから正常にダウンロードできる
+- YAMLシンタックスが有効である
+- DevPodがGitHub URLから直接プロバイダをインストールできる
+- プロバイダのバージョンがリリースタグと一致する
+
 ## レポート
 
 テスト結果は標準出力に表示されます。エラーが発生した場合は、詳細なエラーメッセージとガイダンスが表示されます。
