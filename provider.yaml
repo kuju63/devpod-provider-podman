@@ -1,5 +1,5 @@
 name: podman
-version: v0.3.0
+version: v0.4.0
 home: https://github.com/kuju63/devpod-provider-podman
 icon: https://cdn.jsdelivr.net/npm/boxicons@2.1.4/svg/regular/bx-package.svg
 description: |-
