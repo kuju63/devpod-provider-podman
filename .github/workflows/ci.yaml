@@ -43,4 +43,4 @@ jobs:
           sudo apt-get -q install -y podman
       - name: Run tests
         run: |
-            devpod provider add ./provider.yaml
+            bash tests/integration_test.sh
