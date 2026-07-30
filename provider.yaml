@@ -81,9 +81,9 @@ exec:
 
     # Check if podman command exists
     if ! command -v ${PODMAN_PATH} &> /dev/null; then
-      echo "Error: Podman binary not found at '${PODMAN_PATH}'" 2>&1
-      echo "Please install Podman: brew install podman" 2>&1
-      echo "Or set PODMAN_PATH option to the correct location." 2>&1
+      >&2 echo "Error: Podman binary not found at '${PODMAN_PATH}'"
+      >&2 echo "Please install Podman: brew install podman"
+      >&2 echo "Or set PODMAN_PATH option to the correct location."
       exit 1
     fi
 
@@ -123,14 +123,14 @@ exec:
           eval $INIT_CMD
           echo "Machine created successfully: $MACHINE_NAME"
         else
-          echo "Error: No Podman Machine found." 2>&1
-          echo "" 2>&1 
-          echo "Manual fix:" 2>&1 
-          echo "  podman machine init" 2>&1 
-          echo "  podman machine start" 2>&1 
-          echo "" 2>&1 
-          echo "Or enable auto-init:" 2>&1 
-          echo "  devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true" 2>&1 
+          >&2 echo "Error: No Podman Machine found."
+          >&2 echo ""
+          >&2 echo "Manual fix:"
+          >&2 echo "  podman machine init"
+          >&2 echo "  podman machine start"
+          >&2 echo ""
+          >&2 echo "Or enable auto-init:"
+          >&2 echo "  devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true"
           exit 1
         fi
       fi
@@ -159,19 +159,19 @@ exec:
           done
 
           if [ $ELAPSED -ge $TIMEOUT ]; then
-            echo "Error: Machine start timed out after ${TIMEOUT}s" 2>&1 
-            echo "" 2>&1 
-            echo "You can increase the timeout:" 2>&1 
-            echo "  devpod provider set-options podman PODMAN_MACHINE_START_TIMEOUT=120" 2>&1 
+            >&2 echo "Error: Machine start timed out after ${TIMEOUT}s"
+            >&2 echo ""
+            >&2 echo "You can increase the timeout:"
+            >&2 echo "  devpod provider set-options podman PODMAN_MACHINE_START_TIMEOUT=120"
             exit 1
           fi
         else
-          echo "Error: Podman Machine '$MACHINE_NAME' is not running." 2>&1
-          echo "" 2>&1
-          echo "Manual fix:" 2>&1
+          >&2 echo "Error: Podman Machine '$MACHINE_NAME' is not running."
+          >&2 echo ""
+          >&2 echo "Manual fix:"
           echo "  podman machine start $MACHINE_NAME"
-          echo "" 2>&1
-          echo "Or enable auto-start:" 2>&1
+          >&2 echo ""
+          >&2 echo "Or enable auto-start:"
           echo "  devpod provider set-options podman PODMAN_MACHINE_AUTO_START=true"
           exit 1
         fi
@@ -248,14 +248,14 @@ exec:
 
                 # Check for disk size decrease (not supported)
                 if [ "$MISMATCH_DISK" = true ] && [ "$DESIRED_DISK" -lt "$CURRENT_DISK" ]; then
-                  echo "❌ Error: Cannot decrease disk size from ${CURRENT_DISK}GB to ${DESIRED_DISK}GB" 2>&1
-                  echo "Disk size can only be increased, not decreased." 2>&1
-                  echo "" 2>&1
-                  echo "Options:" 2>&1
-                  echo "  1. Keep current disk size (${CURRENT_DISK}GB)" 2>&1
-                  echo "  2. Recreate machine with smaller disk (⚠️  Data loss)" 2>&1
-                  echo "" 2>&1
-                  echo "Continuing with other resource updates..." 2>&1
+                  >&2 echo "❌ Error: Cannot decrease disk size from ${CURRENT_DISK}GB to ${DESIRED_DISK}GB"
+                  >&2 echo "Disk size can only be increased, not decreased."
+                  >&2 echo ""
+                  >&2 echo "Options:"
+                  >&2 echo "  1. Keep current disk size (${CURRENT_DISK}GB)"
+                  >&2 echo "  2. Recreate machine with smaller disk (⚠️  Data loss)"
+                  >&2 echo ""
+                  >&2 echo "Continuing with other resource updates..."
                   echo ""
                   MISMATCH_DISK=false
                 fi
@@ -263,9 +263,9 @@ exec:
                 # Stop machine for resource updates
                 echo "Stopping machine '$MACHINE_NAME'..."
                 if ! ${PODMAN_PATH} machine stop "$MACHINE_NAME" 2>&1; then
-                  echo "" 2>&1
-                  echo "❌ Error: Failed to stop machine" 2>&1
-                  echo "Cannot proceed with resource updates." 2>&1
+                  >&2 echo ""
+                  >&2 echo "❌ Error: Failed to stop machine"
+                  >&2 echo "Cannot proceed with resource updates."
                   exit 1
                 fi
 
@@ -275,7 +275,7 @@ exec:
                 if [ "$MISMATCH_CPUS" = true ]; then
                   echo "Updating CPUs to ${DESIRED_CPUS}..."
                   if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --cpus "$DESIRED_CPUS" 2>&1; then
-                    echo "⚠️  Warning: Failed to update CPUs" 2>&1
+                    >&2 echo "⚠️  Warning: Failed to update CPUs"
                     UPDATE_SUCCESS=false
                   fi
                 fi
@@ -283,7 +283,7 @@ exec:
                 if [ "$MISMATCH_MEMORY" = true ]; then
                   echo "Updating memory to ${DESIRED_MEMORY}MB..."
                   if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --memory "$DESIRED_MEMORY" 2>&1; then
-                    echo "⚠️  Warning: Failed to update memory" 2>&1
+                    >&2 echo "⚠️  Warning: Failed to update memory"
                     UPDATE_SUCCESS=false
                   fi
                 fi
@@ -291,7 +291,7 @@ exec:
                 if [ "$MISMATCH_DISK" = true ]; then
                   echo "Updating disk size to ${DESIRED_DISK}GB..."
                   if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --disk-size "$DESIRED_DISK" 2>&1; then
-                    echo "⚠️  Warning: Failed to update disk size" 2>&1
+                    >&2 echo "⚠️  Warning: Failed to update disk size"
                     UPDATE_SUCCESS=false
                   fi
                 fi
@@ -300,12 +300,12 @@ exec:
                   echo "Updating rootful mode to ${DESIRED_ROOTFUL}..."
                   if [ "$DESIRED_ROOTFUL" = "true" ]; then
                     if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --rootful 2>&1; then
-                      echo "⚠️  Warning: Failed to update rootful mode" 2>&1
+                      >&2 echo "⚠️  Warning: Failed to update rootful mode"
                       UPDATE_SUCCESS=false
                     fi
                   else
                     if ! ${PODMAN_PATH} machine set "$MACHINE_NAME" --rootful=false 2>&1; then
-                      echo "⚠️  Warning: Failed to update rootful mode" 2>&1
+                      >&2 echo "⚠️  Warning: Failed to update rootful mode"
                       UPDATE_SUCCESS=false
                     fi
                   fi
@@ -315,11 +315,11 @@ exec:
                 echo ""
                 echo "Starting machine '$MACHINE_NAME' with updated configuration..."
                 if ! ${PODMAN_PATH} machine start "$MACHINE_NAME" 2>&1; then
-                  echo "" 2>&1
-                  echo "❌ Error: Failed to start machine after resource updates" 2>&1
-                  echo "Machine state may be inconsistent. Please check:" 2>&1
-                  echo "  podman machine list" 2>&1
-                  echo "  podman machine inspect $MACHINE_NAME" 2>&1
+                  >&2 echo ""
+                  >&2 echo "❌ Error: Failed to start machine after resource updates"
+                  >&2 echo "Machine state may be inconsistent. Please check:"
+                  >&2 echo "  podman machine list"
+                  >&2 echo "  podman machine inspect $MACHINE_NAME"
                   exit 1
                 fi
 
@@ -338,7 +338,7 @@ exec:
                 done
 
                 if [ $ELAPSED -ge $TIMEOUT ]; then
-                  echo "❌ Error: Machine start timed out after ${TIMEOUT}s" 2>&1
+                  >&2 echo "❌ Error: Machine start timed out after ${TIMEOUT}s"
                   exit 1
                 fi
 
@@ -363,83 +363,83 @@ exec:
                   echo ""
                   echo "✅ Resource configuration updated successfully!"
                 else
-                  echo "" 2>&1
-                  echo "⚠️  Some resource updates failed. Check logs above." 2>&1
+                  >&2 echo ""
+                  >&2 echo "⚠️  Some resource updates failed. Check logs above."
                 fi
                 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 echo ""
               else
                 # Display warning with non-destructive update options
-                echo "" 2>&1
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" 2>&1
-                echo "⚠️  WARNING: Machine resource configuration mismatch detected" 2>&1
-                echo "━━━━━━━━━━━━━━━━━━━━━━═════════════════════════════════════════" 2>&1
-                echo "" 2>&1
-                echo "The Podman Machine '$MACHINE_NAME' exists with different resource" 2>&1
-                echo "settings than requested." 2>&1
-                echo "" 2>&1
-                echo "Configuration differences:" 2>&1
-                echo -e "$MISMATCHES" 2>&1
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" 2>&1
-                echo "" 2>&1
-                echo "OPTION 1: Update in-place (Non-destructive, recommended)" 2>&1
-                echo "━━━━━━━━━━━━━━━━═══════════════════════════════════════════" 2>&1
-                echo "" 2>&1
-                echo "Use 'podman machine set' to update resources without data loss:" 2>&1
-                echo "" 2>&1
-                echo "  podman machine stop $MACHINE_NAME" 2>&1
+                >&2 echo ""
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo "⚠️  WARNING: Machine resource configuration mismatch detected"
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "The Podman Machine '$MACHINE_NAME' exists with different resource"
+                >&2 echo "settings than requested."
+                >&2 echo ""
+                >&2 echo "Configuration differences:"
+                >&2 echo -e "$MISMATCHES"
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "OPTION 1: Update in-place (Non-destructive, recommended)"
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "Use 'podman machine set' to update resources without data loss:"
+                >&2 echo ""
+                >&2 echo "  podman machine stop $MACHINE_NAME"
 
                 if [ "$MISMATCH_CPUS" = true ]; then
-                  echo "  podman machine set $MACHINE_NAME --cpus $DESIRED_CPUS" 2>&1
+                  >&2 echo "  podman machine set $MACHINE_NAME --cpus $DESIRED_CPUS"
                 fi
                 if [ "$MISMATCH_MEMORY" = true ]; then
-                  echo "  podman machine set $MACHINE_NAME --memory $DESIRED_MEMORY" 2>&1
+                  >&2 echo "  podman machine set $MACHINE_NAME --memory $DESIRED_MEMORY"
                 fi
                 if [ "$MISMATCH_DISK" = true ]; then
                   if [ "$DESIRED_DISK" -lt "$CURRENT_DISK" ]; then
-                    echo "  # ⚠️  Disk size cannot be decreased (current: ${CURRENT_DISK}GB, desired: ${DESIRED_DISK}GB)" 2>&1
+                    >&2 echo "  # ⚠️  Disk size cannot be decreased (current: ${CURRENT_DISK}GB, desired: ${DESIRED_DISK}GB)"
                   else
-                    echo "  podman machine set $MACHINE_NAME --disk-size $DESIRED_DISK" 2>&1
+                    >&2 echo "  podman machine set $MACHINE_NAME --disk-size $DESIRED_DISK"
                   fi
                 fi
                 if [ "$MISMATCH_ROOTFUL" = true ]; then
                   if [ "$DESIRED_ROOTFUL" = "true" ]; then
-                    echo "  podman machine set $MACHINE_NAME --rootful" 2>&1
+                    >&2 echo "  podman machine set $MACHINE_NAME --rootful"
                   else
-                    echo "  podman machine set $MACHINE_NAME --rootful=false" 2>&1
+                    >&2 echo "  podman machine set $MACHINE_NAME --rootful=false"
                   fi
                 fi
 
-                echo "  podman machine start $MACHINE_NAME" 2>&1
-                echo "" 2>&1
-                echo "Or enable automatic updates:" 2>&1
-                echo "  devpod provider set-options podman PODMAN_MACHINE_AUTO_RESOURCE_UPDATE=true" 2>&1
-                echo "" 2>&1
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" 2>&1
-                echo "" 2>&1
-                echo "OPTION 2: Recreate machine (Destructive)" 2>&1
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" 2>&1
-                echo "" 2>&1
-                echo "  1. Stop and delete the machine (⚠️  This will remove all data):" 2>&1
-                echo "     podman machine stop $MACHINE_NAME" 2>&1
-                echo "     podman machine rm $MACHINE_NAME" 2>&1
-                echo "" 2>&1
-                echo "  2. Recreate with DevPod (auto-init must be enabled):" 2>&1
-                echo "     devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true" 2>&1
-                echo "     devpod up <your-workspace> --provider podman" 2>&1
-                echo "" 2>&1
-                echo "  Or manually create with specific resources:" 2>&1
-                echo "     podman machine init $MACHINE_NAME \\" 2>&1
-                echo "       --cpus $DESIRED_CPUS \\" 2>&1
-                echo "       --memory $DESIRED_MEMORY \\" 2>&1
-                echo "       --disk-size $DESIRED_DISK" 2>&1
+                >&2 echo "  podman machine start $MACHINE_NAME"
+                >&2 echo ""
+                >&2 echo "Or enable automatic updates:"
+                >&2 echo "  devpod provider set-options podman PODMAN_MACHINE_AUTO_RESOURCE_UPDATE=true"
+                >&2 echo ""
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "OPTION 2: Recreate machine (Destructive)"
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
+                >&2 echo "  1. Stop and delete the machine (⚠️  This will remove all data):"
+                >&2 echo "     podman machine stop $MACHINE_NAME"
+                >&2 echo "     podman machine rm $MACHINE_NAME"
+                >&2 echo ""
+                >&2 echo "  2. Recreate with DevPod (auto-init must be enabled):"
+                >&2 echo "     devpod provider set-options podman PODMAN_MACHINE_AUTO_INIT=true"
+                >&2 echo "     devpod up <your-workspace> --provider podman"
+                >&2 echo ""
+                >&2 echo "  Or manually create with specific resources:"
+                >&2 echo "     podman machine init $MACHINE_NAME \\"
+                >&2 echo "       --cpus $DESIRED_CPUS \\"
+                >&2 echo "       --memory $DESIRED_MEMORY \\"
+                >&2 echo "       --disk-size $DESIRED_DISK"
                 if [ "$DESIRED_ROOTFUL" = "true" ]; then
-                  echo "       --rootful" 2>&1
+                  >&2 echo "       --rootful"
                 fi
-                echo "" 2>&1
-                echo "Continuing with existing machine configuration..." 2>&1
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" 2>&1
-                echo "" 2>&1
+                >&2 echo ""
+                >&2 echo "Continuing with existing machine configuration..."
+                >&2 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                >&2 echo ""
               fi
             fi
           fi
@@ -451,12 +451,12 @@ exec:
     echo "Testing Podman connectivity..."
     ${PODMAN_PATH} ps >/dev/null 2>&1
     if [ $? -ne 0 ]; then
-      echo "Error: Podman is not reachable." 2>&1
+      >&2 echo "Error: Podman is not reachable."
       if [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "This should not happen after machine management." 2>&1
-        echo "Please check: podman machine list" 2>&1
+        >&2 echo "This should not happen after machine management."
+        >&2 echo "Please check: podman machine list"
       else
-        echo "Please ensure Podman is running properly." 2>&1
+        >&2 echo "Please ensure Podman is running properly."
       fi
       exit 1
     fi
