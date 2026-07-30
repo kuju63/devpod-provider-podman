@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+            persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -30,6 +32,8 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v7
+        with:
+            persist-credentials: false
       - name: Set up DevPod-CLI
         run: |
           curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" && sudo install -c -m 0755 devpod /usr/local/bin && rm -f devpod
