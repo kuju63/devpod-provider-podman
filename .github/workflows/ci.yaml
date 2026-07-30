@@ -36,7 +36,7 @@ jobs:
             persist-credentials: false
       - name: Set up DevPod-CLI
         run: |
-          curl -L -o devpod "https://github.com/loft-sh/devpod/releases/download/v0.6.15/devpod-linux-amd64" && sudo install -c -m 0755 devpod /usr/local/bin && rm -f devpod
+          curl --fail --location -L -o devpod "https://github.com/loft-sh/devpod/releases/download/v0.6.15/devpod-linux-amd64" && sudo install -c -m 0755 devpod /usr/local/bin && rm -f devpod
       - name: Setup Podman
         run: |
           sudo apt-get -q update
