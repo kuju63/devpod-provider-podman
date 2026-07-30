@@ -1,6 +1,6 @@
 #!/bin/bash
 # Integration test for Phase 2: DevPod Provider Integration
-set -e pipefail
+set -euo pipefail
 
 echo "=== Phase 2 Integration Test ==="
 echo ""
